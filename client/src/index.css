@@ -1,4 +1,86 @@
+/* Design tokens from the Comdove Mock UI design. Dark only. */
+:root {
+  --bg: #0e1116;
+  --surface: #12161b;
+  --raised: #171c22;
+  --border: rgba(255, 255, 255, 0.09);
+  --divider: rgba(255, 255, 255, 0.06);
+  --hover: rgba(255, 255, 255, 0.06);
+
+  --text: #e6eaef;
+  --text-2: #c6ced6;
+  --muted: #9ea9b4;
+  --faint: #78858f;
+
+  --accent: #e4b063;
+  --accent-hover: #ebc27e;
+  --accent-text: #f0d199;
+  --accent-tint: rgba(228, 176, 99, 0.12);
+  --accent-line: rgba(228, 176, 99, 0.5);
+
+  --ok: #4dbe93;
+  --read: #6c9bf5;
+  --offline: #3c4753;
+  --danger: #d9524a;
+  --mode-manual: #55626f;
+  --mode-auto: #8f86e8;
+
+  --out-bg: #132e25;
+  --out-border: rgba(77, 190, 147, 0.25);
+
+  --font-ui: 'Instrument Sans', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  --radius-control: 5px;
+  --radius-bubble: 8px;
+  --radius-card: 10px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
 body {
   margin: 0;
-  font-family: system-ui, sans-serif;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  letter-spacing: -0.012em;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  color: var(--accent-text);
+}
+
+button {
+  font: inherit;
+  letter-spacing: inherit;
+  cursor: pointer;
+}
+
+input,
+select {
+  font: inherit;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-thumb {
+  background: #2e3741;
+  border-radius: 3px;
+}
+
+.mono {
+  font-family: var(--font-mono);
 }

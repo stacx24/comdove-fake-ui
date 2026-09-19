@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes, useSearchParams } from 'react-router-dom'
+import Shell from './components/Shell'
 import Admin from './pages/Admin'
 import ClientGrid from './pages/ClientGrid'
 import Launch from './pages/Launch'
@@ -11,10 +12,12 @@ function ClientRoute() {
 
 export default function App() {
   return (
-    <Routes>
-      <Route path="/" element={<Navigate to="/client" replace />} />
-      <Route path="/client" element={<ClientRoute />} />
-      <Route path="/admin" element={<Admin />} />
-    </Routes>
+    <Shell>
+      <Routes>
+        <Route path="/" element={<Navigate to="/client" replace />} />
+        <Route path="/client" element={<ClientRoute />} />
+        <Route path="/admin" element={<Admin />} />
+      </Routes>
+    </Shell>
   )
 }
