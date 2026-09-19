@@ -30,9 +30,19 @@ export interface StatusEvent {
   timestamp: number
 }
 
+// Outcome of the webhook the mock posted to Comdove for this message (Tech Spec §5).
+// The spec does not pin this shape down yet; agree it with the server team (plan §10).
+export interface WebhookOutcome {
+  state: 'ok' | 'retrying' | 'failed' | 'pending'
+  http_status?: number
+  attempts: number
+  latency_ms?: number
+  note?: string // e.g. "tile offline" while pending
+}
+
 export interface LogEntry extends ChatMessage {
   statuses: StatusEvent[]
-  webhook?: { http_status?: number; attempts: number; ok: boolean }
+  webhook?: WebhookOutcome
 }
 
 export interface TileState {

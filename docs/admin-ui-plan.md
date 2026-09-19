@@ -7,7 +7,7 @@ Sources:
 - *Comdove Mock Server — API Tech Spec* (§6 Control API)
 - Design: *Comdove Mock UI* (claude.ai/design), Admin screen
 
-Status: **plan only, nothing built yet.**
+Status: **built with sample data** (sections 1–8). Section 10 waits for the server.
 
 ---
 
