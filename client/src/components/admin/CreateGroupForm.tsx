@@ -1,16 +1,20 @@
-// Create group (plan §3.2, PRD FR-15). Not in the design; styled like the Register card.
+// Create group (plan §3.2, PRD FR-15) and the list of groups with Delete (plan §11.2).
+// Not in the design; styled like the Register card.
 // POST /api/groups — the numbers become customer numbers on the server.
 import { useState, type FormEvent } from 'react'
 import { api } from '../../api'
+import type { GroupSummary } from '../../types'
 import { checkGroupName, checkGroupNumbers, MAX_GROUP_SIZE, parseNumberList } from '../../validation'
 
 interface Props {
+  groups: GroupSummary[]
   groupExists: (name: string) => boolean
   isKnownNumber: (number: string) => boolean
   onCreated: () => void
+  onDeleteGroup: (group: GroupSummary) => void
 }
 
-export default function CreateGroupForm({ groupExists, isKnownNumber, onCreated }: Props) {
+export default function CreateGroupForm({ groups, groupExists, isKnownNumber, onCreated, onDeleteGroup }: Props) {
   const [name, setName] = useState('')
   const [numbersText, setNumbersText] = useState('')
   const [busy, setBusy] = useState(false)
@@ -108,6 +112,29 @@ export default function CreateGroupForm({ groupExists, isKnownNumber, onCreated 
       )}
 
       <div className="hint">POST /api/groups · one per line or comma-separated</div>
+
+      {groups.length > 0 && (
+        <div className="group-list" data-testid="group-list">
+          <div className="eyebrow">Client groups</div>
+          {groups.map((g) => (
+            <div key={g.id} className="group-list-row" data-testid={`group-row-${g.name}`}>
+              <span className="mono">{g.name}</span>
+              <span className="mono" style={{ color: 'var(--dim)', fontSize: 11 }}>{g.count} numbers</span>
+              <span className="pill" style={{ color: g.status === 'locked' ? 'var(--green)' : 'var(--subtle)' }}>
+                {g.status === 'locked' ? 'live' : 'free'}
+              </span>
+              <button
+                type="button"
+                className="btn-tiny btn-tiny-danger"
+                data-testid={`delete-group-${g.name}`}
+                onClick={() => onDeleteGroup(g)}
+              >
+                Delete
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
     </form>
   )
 }

@@ -25,24 +25,64 @@ export interface Group {
   since?: number
 }
 
-export interface StatusEvent {
+// ---- Admin: shapes from the server team's UI-API-GUIDE.md (§2b, §2e) ----
+// Times here are unix *milliseconds*, unlike ChatMessage.timestamp.
+
+// GET /api/groups as the server sends it (the client pages still use `Group`).
+export interface GroupSummary {
+  id: string
+  name: string
+  count: number
+  status: 'free' | 'locked'
+  locked_since: number | null
+}
+
+// GET /api/customers
+export interface Customer {
+  number: string
+  label: string
+  group_id: string
+  online: boolean
+  effective_online: boolean
+  claim_status: 'free' | 'locked'
+  reply_mode: string
+  type: 'customer'
+}
+
+export interface TimelineEvent {
   status: MessageStatus
-  timestamp: number
+  at: number
 }
 
-// Outcome of the webhook the mock posted to Comdove for this message (Tech Spec §5).
-// The spec does not pin this shape down yet; agree it with the server team (plan §10).
-export interface WebhookOutcome {
-  state: 'ok' | 'retrying' | 'failed' | 'pending'
+export interface WebhookAttempt {
+  n: number
   http_status?: number
-  attempts: number
-  latency_ms?: number
-  note?: string // e.g. "tile offline" while pending
+  duration_ms?: number
+  at: number
 }
 
-export interface LogEntry extends ChatMessage {
-  statuses: StatusEvent[]
-  webhook?: WebhookOutcome
+// One webhook per status the mock reported to Comdove (Tech Spec §5: "one webhook per transition").
+// The guide only shows state "ok"; the full list is still to confirm (docs/server-team-questions.md Q4).
+export interface WebhookDelivery {
+  kind: string // "sent" | "delivered" | "read", or the inbound message webhook
+  state: string // "ok", "retrying", "failed", "pending", ...
+  attempts: WebhookAttempt[]
+}
+
+// GET /api/log?limit=100, newest first.
+export interface LogEntry {
+  wamid: string
+  time: number
+  direction?: 'inbound' | 'outbound'
+  source?: string
+  from: string
+  to: string
+  business?: { phone_number_id: string; label: string }
+  group_id?: string | null
+  body: string
+  status: MessageStatus
+  timeline: TimelineEvent[]
+  webhooks: WebhookDelivery[]
 }
 
 export interface TileState {

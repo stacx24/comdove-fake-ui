@@ -206,7 +206,7 @@ All open questions for the server team are collected in **[server-team-questions
 ## 11. Next build: from the server team's guide (Q4, Q7)
 
 Source: **`UI-API-GUIDE.md`** from the server team (Person 2, control API), 2026-09-19, sections 2c and 2e.
-Status: **planned, not built.** Works in sample mode first, like everything else; the switch to the server stays one `.env` value.
+Status: **built 2026-09-19** (sample mode, and checked against a stand-in server using the guide's exact shapes). Works in sample mode first, like everything else; the switch to the server stays one `.env` value.
 
 ### 11.1 Webhook result per status (Q4)
 
@@ -233,6 +233,8 @@ Status: **planned, not built.** Works in sample mode first, like everything else
 
 **Files.** `types.ts` (new log shape), `mock/sampleData.ts` (sample log in the new shape, including one retried and one queued webhook), `mock/sampleServer.ts`, `components/admin/MessageLog.tsx`, `index.css` (detail panel).
 
+**Assumption until the server team confirms:** a message whose `status` is `queued` shows `queued · tile offline`; any `state` other than `ok`, `retrying`, `failed` or `error` is shown as its raw text. Retries show as `retry {n-1}/3` (attempt 3 = 2nd retry), matching the design.
+
 **Still to ask the server team:** the full list of `state` values (the guide only shows `"ok"`), and how a queued message shows (`state: "pending"`? no `webhooks` entry yet?).
 
 ### 11.2 Delete numbers and groups (Q7)
@@ -255,12 +257,13 @@ Status: **planned, not built.** Works in sample mode first, like everything else
 Q4 and Q7 depend on the server's real shapes, so these come with them:
 - **Groups list shape:** the server sends `{ id, name, count, status: "free" | "locked", locked_since }` (no `numbers` list). Today the Admin page reads each group's numbers, so it **crashes** on the real server. Customer rows move to **`GET /api/customers`** (`number`, `label`, `group_id`, `claim_status`).
 - **Client page:** the same groups-list change breaks the launch page. That's the client dev's file; tell them.
+- **Built:** Admin now reads groups from `api.listGroupSummaries()` and customers from `api.listCustomers()`. `api.listGroups()` and the `Group` type are left unchanged for the client pages.
 
 ### 11.4 Checks
 
-- [ ] Log row shows the latest webhook's last attempt; clicking opens all attempts per status; times correct (ms)
-- [ ] Delete business number: confirm → row gone; cancel keeps it
-- [ ] Delete free group: confirm → group and its customer rows gone
-- [ ] Delete locked group: server/sample answers 409 → "open in a browser" message, nothing removed
-- [ ] All new buttons have `data-testid`; build and the 27 existing admin checks still pass
+- [x] Log row shows the latest webhook's last attempt; clicking opens all attempts per status; times correct (ms)
+- [x] Delete business number: confirm → row gone; cancel keeps it
+- [x] Delete free group: confirm → group and its customer rows gone
+- [x] Delete locked group: server/sample answers 409 → "open in a browser" message, nothing removed
+- [x] All new buttons have `data-testid`; build and the 27 existing admin checks still pass
 

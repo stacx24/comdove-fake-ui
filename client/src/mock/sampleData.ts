@@ -1,6 +1,6 @@
 // Sample data used while the mock server is not ready (VITE_DATA_SOURCE=sample).
 // Mirrors the "Comdove Mock UI" design.
-import type { BusinessNumber, Group, LogEntry, MessageStatus, WebhookOutcome } from '../types'
+import type { BusinessNumber, Group, LogEntry, MessageStatus, WebhookDelivery } from '../types'
 
 export const sampleBusinessNumbers: BusinessNumber[] = [
   { display_number: '918888800001', label: 'Sales', phone_number_id: 'MOCK-PN-1', token: 'mock_tok_9f3a1c7e2b4d' },
@@ -19,34 +19,77 @@ export const sampleGroups: Group[] = [
 ]
 
 const STEPS: MessageStatus[] = ['sent', 'delivered', 'read']
+const label = (pnid: string) => sampleBusinessNumbers.find((b) => b.phone_number_id === pnid)!.label
+const at = (time: string) => new Date(`2026-09-19T${time}`).getTime()
 
-function entry(
-  id: number,
-  time: string,
-  from: string,
-  to: string,
-  body: string,
-  status: MessageStatus,
-  webhook: WebhookOutcome,
-): LogEntry {
-  const timestamp = Math.floor(new Date(`2026-09-19T${time}`).getTime() / 1000)
-  const statuses = STEPS.slice(0, STEPS.indexOf(status) + 1).map((s, i) => ({ status: s, timestamp: timestamp + i * 4 }))
-  return { wamid: `wamid.MOCK-sample${id}`, from, to, body, status, timestamp, statuses, webhook }
+// A webhook that worked first time, `ms` after `time`.
+const ok = (kind: string, time: number, ms: number): WebhookDelivery => ({
+  kind,
+  state: 'ok',
+  attempts: [{ n: 1, http_status: 200, duration_ms: ms, at: time + ms }],
+})
+
+interface EntryInput {
+  id: number
+  time: string
+  direction: 'inbound' | 'outbound'
+  from: string
+  to: string
+  pnid: string
+  group: string
+  body: string
+  status: MessageStatus
+  webhooks: (time: number) => WebhookDelivery[]
+}
+
+// Shape from the server team's UI-API-GUIDE.md §2e. Times are milliseconds.
+function entry(e: EntryInput): LogEntry {
+  const time = at(e.time)
+  const reached = e.status === 'queued' ? ['sent' as const] : STEPS.slice(0, STEPS.indexOf(e.status) + 1)
+  return {
+    wamid: `wamid.MOCK-sample${e.id}`,
+    time,
+    direction: e.direction,
+    source: e.direction === 'outbound' ? 'api' : 'tile',
+    from: e.from,
+    to: e.to,
+    business: { phone_number_id: e.pnid, label: label(e.pnid) },
+    group_id: e.group,
+    body: e.body,
+    status: e.status,
+    timeline: reached.map((status, i) => ({ status, at: time + i * 4000 })),
+    webhooks: e.webhooks(time),
+  }
 }
 
 export const sampleLog: LogEntry[] = [
-  entry(7, '10:04:31', '919876543210', '918888800001', 'how much?', 'read',
-    { state: 'ok', http_status: 200, attempts: 1, latency_ms: 84 }),
-  entry(6, '10:04:02', '918888800001', '919876543213', 'Your appointment is confirmed for Friday 4pm.', 'sent',
-    { state: 'ok', http_status: 200, attempts: 1, latency_ms: 61 }),
-  entry(5, '10:03:48', '918888800002', '919876543212', 'We received your return request.', 'sent',
-    { state: 'pending', attempts: 0, note: 'tile offline' }),
-  entry(4, '10:02:55', '918888800001', '919876543210', 'Hello from Comdove — yes, it left the warehouse this morning.', 'read',
-    { state: 'ok', http_status: 200, attempts: 1, latency_ms: 92 }),
-  entry(3, '10:02:10', '919876543210', '918888800001', 'Hi, is my order #4821 shipped yet?', 'read',
-    { state: 'retrying', http_status: 500, attempts: 2 }),
-  entry(2, '09:58:07', '918888800003', '919876543216', 'Your OTP is 448213', 'delivered',
-    { state: 'ok', http_status: 200, attempts: 1, latency_ms: 70 }),
-  entry(1, '09:41:19', '918888800001', '919876543217', 'Thanks for reaching out, a specialist will reply shortly.', 'delivered',
-    { state: 'ok', http_status: 200, attempts: 1, latency_ms: 77 }),
+  entry({ id: 7, time: '10:04:31', direction: 'inbound', from: '919876543210', to: '918888800001', pnid: 'MOCK-PN-1', group: 'alpha',
+    body: 'how much?', status: 'read',
+    webhooks: (t) => [ok('message', t, 84)] }),
+  entry({ id: 6, time: '10:04:02', direction: 'outbound', from: '918888800001', to: '919876543213', pnid: 'MOCK-PN-1', group: 'alpha',
+    body: 'Your appointment is confirmed for Friday 4pm.', status: 'sent',
+    webhooks: (t) => [ok('sent', t, 61)] }),
+  entry({ id: 5, time: '10:03:48', direction: 'outbound', from: '918888800002', to: '919876543212', pnid: 'MOCK-PN-2', group: 'alpha',
+    body: 'We received your return request.', status: 'queued',
+    webhooks: (t) => [ok('sent', t, 58)] }),
+  entry({ id: 4, time: '10:02:55', direction: 'outbound', from: '918888800001', to: '919876543210', pnid: 'MOCK-PN-1', group: 'alpha',
+    body: 'Hello from Comdove — yes, it left the warehouse this morning.', status: 'read',
+    webhooks: (t) => [ok('sent', t, 92), ok('delivered', t + 4000, 77), ok('read', t + 8000, 81)] }),
+  entry({ id: 3, time: '10:02:10', direction: 'inbound', from: '919876543210', to: '918888800001', pnid: 'MOCK-PN-1', group: 'alpha',
+    body: 'Hi, is my order #4821 shipped yet?', status: 'read',
+    webhooks: (t) => [{
+      kind: 'message',
+      state: 'retrying',
+      attempts: [
+        { n: 1, http_status: 500, duration_ms: 212, at: t + 40 },
+        { n: 2, http_status: 500, duration_ms: 198, at: t + 1250 },
+        { n: 3, http_status: 500, duration_ms: 205, at: t + 6460 },
+      ],
+    }] }),
+  entry({ id: 2, time: '09:58:07', direction: 'outbound', from: '918888800003', to: '919876543216', pnid: 'MOCK-PN-3', group: 'alpha',
+    body: 'Your OTP is 448213', status: 'delivered',
+    webhooks: (t) => [ok('sent', t, 70), ok('delivered', t + 4000, 64)] }),
+  entry({ id: 1, time: '09:41:19', direction: 'outbound', from: '918888800001', to: '919876543217', pnid: 'MOCK-PN-1', group: 'alpha',
+    body: 'Thanks for reaching out, a specialist will reply shortly.', status: 'delivered',
+    webhooks: (t) => [ok('sent', t, 77), ok('delivered', t + 4000, 71)] }),
 ]

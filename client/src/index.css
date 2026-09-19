@@ -357,8 +357,8 @@ textarea.input {
 }
 
 .numbers-row {
-  grid-template-columns: minmax(130px, 1fr) minmax(90px, 1fr) minmax(110px, 1fr) minmax(170px, 1.4fr) 90px 100px;
-  min-width: 760px;
+  grid-template-columns: minmax(130px, 1fr) minmax(90px, 1fr) minmax(110px, 1fr) minmax(230px, 1.6fr) 90px 100px;
+  min-width: 820px;
 }
 
 .numbers-body {
@@ -418,6 +418,75 @@ textarea.input {
 
 .chip.on.read {
   color: var(--blue);
+}
+
+/* Delete buttons (plan §11.2) */
+.btn-tiny-danger {
+  color: var(--red);
+  border-color: rgba(217, 82, 74, 0.35);
+}
+
+.btn-tiny-danger:hover {
+  color: var(--red);
+  background: rgba(217, 82, 74, 0.12);
+}
+
+.group-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-top: 1px solid var(--divider);
+  padding-top: 12px;
+}
+
+.group-list-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  gap: 8px;
+  align-items: center;
+  font-size: 12px;
+}
+
+/* Log row detail: every webhook attempt per status (plan §11.1) */
+.log-row-button {
+  cursor: pointer;
+}
+
+.log-row-button:hover,
+.log-row-button.open {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.log-row-button:focus-visible {
+  outline: 1px solid var(--gold);
+  outline-offset: -1px;
+}
+
+.log-detail {
+  min-width: 950px;
+  padding: 8px 16px 12px 98px;
+  background: rgba(255, 255, 255, 0.02);
+  border-top: 1px dashed var(--divider);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.log-detail-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+}
+
+.log-detail-kind {
+  width: 80px;
+  color: var(--text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 10px;
 }
 
 /* ---- Dialog ---- */

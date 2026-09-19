@@ -1,13 +1,14 @@
-// Registered numbers (plan §3.3). Business numbers from GET /api/business-numbers,
-// customer numbers from the members of GET /api/groups.
+// Registered numbers (plan §3.3, §11.3). Business numbers from GET /api/business-numbers,
+// customer numbers from GET /api/customers (UI-API-GUIDE.md §2b).
 import { useState } from 'react'
-import type { BusinessNumber, Group } from '../../types'
+import type { BusinessNumber, Customer } from '../../types'
 
 interface Props {
   businessNumbers: BusinessNumber[]
-  groups: Group[]
+  customers: Customer[]
   loading: boolean
   error: string | null
+  onDeleteNumber: (number: BusinessNumber) => void
 }
 
 interface NumberRow {
@@ -18,9 +19,10 @@ interface NumberRow {
   type: 'business' | 'customer'
   claim: string
   live: boolean
+  business?: BusinessNumber
 }
 
-function toRows(businessNumbers: BusinessNumber[], groups: Group[]): NumberRow[] {
+function toRows(businessNumbers: BusinessNumber[], customers: Customer[]): NumberRow[] {
   const business = businessNumbers.map((b): NumberRow => ({
     number: b.display_number,
     label: b.label || '—',
@@ -29,19 +31,18 @@ function toRows(businessNumbers: BusinessNumber[], groups: Group[]): NumberRow[]
     type: 'business',
     claim: '—',
     live: false,
+    business: b,
   }))
-  const customers = groups.flatMap((g) =>
-    g.numbers.map((number): NumberRow => ({
-      number,
-      label: g.name,
-      pnid: '—',
-      token: null,
-      type: 'customer',
-      claim: g.locked ? `${g.name} · live` : 'free',
-      live: g.locked,
-    })),
-  )
-  return [...business, ...customers]
+  const customerRows = customers.map((c): NumberRow => ({
+    number: c.number,
+    label: c.label || c.group_id,
+    pnid: '—',
+    token: null,
+    type: 'customer',
+    claim: c.claim_status === 'locked' ? `${c.group_id} · live` : 'free',
+    live: c.claim_status === 'locked',
+  }))
+  return [...business, ...customerRows]
 }
 
 // navigator.clipboard only exists on https/localhost; fall back for office-LAN http.
@@ -55,9 +56,9 @@ async function copyText(text: string) {
   area.remove()
 }
 
-export default function NumbersTable({ businessNumbers, groups, loading, error }: Props) {
+export default function NumbersTable({ businessNumbers, customers, loading, error, onDeleteNumber }: Props) {
   const [copied, setCopied] = useState<string | null>(null)
-  const rows = toRows(businessNumbers, groups)
+  const rows = toRows(businessNumbers, customers)
 
   async function copy(number: string, token: string) {
     await copyText(token)
@@ -99,6 +100,16 @@ export default function NumbersTable({ businessNumbers, groups, loading, error }
                   onClick={() => copy(row.number, row.token!)}
                 >
                   {copied === row.number ? 'Copied' : 'Copy'}
+                </button>
+              )}
+              {row.business && (
+                <button
+                  type="button"
+                  className="btn-tiny btn-tiny-danger"
+                  data-testid={`delete-number-${row.number}`}
+                  onClick={() => onDeleteNumber(row.business!)}
+                >
+                  Delete
                 </button>
               )}
             </div>

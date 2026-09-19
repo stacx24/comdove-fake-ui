@@ -1,7 +1,7 @@
 // Control API client (Tech Spec §6). The only place the UI talks to the mock server.
 // VITE_DATA_SOURCE picks the backend: "sample" (built-in fake data, the default) or "server".
 import { SampleError, sampleServer } from './mock/sampleServer'
-import type { BusinessNumber, Group, LogEntry } from './types'
+import type { BusinessNumber, Customer, Group, GroupSummary, LogEntry } from './types'
 
 export const dataSource = import.meta.env.VITE_DATA_SOURCE === 'server' ? 'server' : 'sample'
 
@@ -9,7 +9,15 @@ export const dataSource = import.meta.env.VITE_DATA_SOURCE === 'server' ? 'serve
 export const webhookUrl = import.meta.env.VITE_WEBHOOK_URL || 'http://localhost:3000/webhooks/whatsapp'
 
 // Every failure reaches the UI as an ApiError whose message can be shown as-is.
-export class ApiError extends Error {}
+// `status` is the HTTP status (0 when the server can't be reached), e.g. 409 = conflict.
+export class ApiError extends Error {
+  readonly status: number
+
+  constructor(message: string, status = 0) {
+    super(message)
+    this.status = status
+  }
+}
 
 const unreachable = `Mock server not reachable at ${__MOCK_SERVER_URL__.replace(/^https?:\/\//, '')}.`
 
@@ -35,9 +43,9 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
 
   if (!res.ok) {
     const message = (data as { error?: { message?: string } } | undefined)?.error?.message
-    if (message) throw new ApiError(message)
+    if (message) throw new ApiError(message, res.status)
     // The Vite proxy answers 5xx with no body when the server is down.
-    throw new ApiError(res.status >= 500 ? unreachable : `${method} ${path} failed (${res.status}).`)
+    throw new ApiError(res.status >= 500 ? unreachable : `${method} ${path} failed (${res.status}).`, res.status)
   }
   return data as T
 }
@@ -46,7 +54,7 @@ async function sample<T>(call: () => Promise<T>): Promise<T> {
   try {
     return await call()
   } catch (err) {
-    throw err instanceof SampleError ? new ApiError(err.message) : err
+    throw err instanceof SampleError ? new ApiError(err.message, err.status) : err
   }
 }
 
@@ -54,8 +62,16 @@ const serverApi = {
   listBusinessNumbers: () => request<BusinessNumber[]>('GET', '/api/business-numbers'),
   registerBusinessNumber: (display_number: string, label: string) =>
     request<{ phone_number_id: string; token: string }>('POST', '/api/business-numbers', { display_number, label }),
+  // Used by the client pages (data/server.ts), which still expect the spec's Group shape.
   listGroups: () => request<Group[]>('GET', '/api/groups'),
-  createGroup: (name: string, numbers: string[]) => request<Group>('POST', '/api/groups', { name, numbers }),
+  // Admin: the same endpoint in the shape the server actually sends (UI-API-GUIDE.md §1, §2d).
+  listGroupSummaries: () => request<GroupSummary[]>('GET', '/api/groups'),
+  listCustomers: () => request<Customer[]>('GET', '/api/customers'),
+  createGroup: (name: string, numbers: string[]) =>
+    request<{ id: string; name: string; numbers: string[] }>('POST', '/api/groups', { name, numbers }),
+  deleteBusinessNumber: (phone_number_id: string) =>
+    request<void>('DELETE', `/api/business-numbers/${encodeURIComponent(phone_number_id)}`),
+  deleteGroup: (id: string) => request<void>('DELETE', `/api/groups/${encodeURIComponent(id)}`),
   setPresence: (number: string, online: boolean) => request<void>('POST', '/api/presence', { number, online }),
   inject: (from: string, to: string, body: string) => request<{ wamid: string }>('POST', '/api/inject', { from, to, body }),
   log: (limit = 100) => request<LogEntry[]>('GET', `/api/log?limit=${limit}`),
@@ -66,7 +82,11 @@ const sampleApi: typeof serverApi = {
   listBusinessNumbers: () => sample(() => sampleServer.listBusinessNumbers()),
   registerBusinessNumber: (display_number, label) => sample(() => sampleServer.registerBusinessNumber(display_number, label)),
   listGroups: () => sample(() => sampleServer.listGroups()),
+  listGroupSummaries: () => sample(() => sampleServer.listGroupSummaries()),
+  listCustomers: () => sample(() => sampleServer.listCustomers()),
   createGroup: (name, numbers) => sample(() => sampleServer.createGroup(name, numbers)),
+  deleteBusinessNumber: (phone_number_id) => sample(() => sampleServer.deleteBusinessNumber(phone_number_id)),
+  deleteGroup: (id) => sample(() => sampleServer.deleteGroup(id)),
   setPresence: async () => {},
   inject: async () => {
     throw new ApiError('Inject needs the real mock server (VITE_DATA_SOURCE=server).')
