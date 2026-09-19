@@ -31,11 +31,11 @@ export const mockSource: DataSource = {
   connectGroup(group, handlers) {
     handlers.onState('mock')
 
-    const found = groups.find((g) => g.name === group)
+    const found = groups.find((g) => g.id === group)
     const emit = () => {
       if (!found) return // unknown group: nothing arrives; the grid shows "not found"
-      if (found.locked) {
-        handlers.onEvent({ type: 'group.locked', group, since: found.since ?? 0 })
+      if (found.status === 'locked') {
+        handlers.onEvent({ type: 'group.locked', group, since: found.locked_since ?? 0 })
         return
       }
       handlers.onEvent({ type: 'group.claimed', group, tiles: copy(tilesByGroup[group] ?? []) })

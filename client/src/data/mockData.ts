@@ -174,11 +174,20 @@ const loadTile = (number: string, i: number): TileState => {
   }
 }
 
+// Same shape as GET /api/groups: a count, not the members (those arrive in group.claimed).
+const group = (name: string, members: string[], lockedMinutesAgo?: number): Group => ({
+  id: name,
+  name,
+  count: members.length,
+  status: lockedMinutesAgo === undefined ? 'free' : 'locked',
+  locked_since: lockedMinutesAgo === undefined ? null : ago(lockedMinutesAgo) * 1000,
+})
+
 export const groups: Group[] = [
-  { name: 'alpha', numbers: A, locked: false },
-  { name: 'beta', numbers: B, locked: true, since: ago(12) },
-  { name: 'gamma', numbers: G, locked: false },
-  { name: 'load-test', numbers: L, locked: false },
+  group('alpha', A),
+  group('beta', B, 12),
+  group('gamma', G),
+  group('load-test', L),
 ]
 
 export const tilesByGroup: Record<string, TileState[]> = {

@@ -1,7 +1,7 @@
 // Control API client (Tech Spec §6). The only place the UI talks to the mock server.
 // VITE_DATA_SOURCE picks the backend: "sample" (built-in fake data, the default) or "server".
 import { SampleError, sampleServer } from './mock/sampleServer'
-import type { BusinessNumber, Customer, Group, GroupSummary, LogEntry } from './types'
+import type { BusinessNumber, Customer, Group, LogEntry } from './types'
 
 export const dataSource = import.meta.env.VITE_DATA_SOURCE === 'server' ? 'server' : 'sample'
 
@@ -62,10 +62,7 @@ const serverApi = {
   listBusinessNumbers: () => request<BusinessNumber[]>('GET', '/api/business-numbers'),
   registerBusinessNumber: (display_number: string, label: string) =>
     request<{ phone_number_id: string; token: string }>('POST', '/api/business-numbers', { display_number, label }),
-  // Used by the client pages (data/server.ts), which still expect the spec's Group shape.
   listGroups: () => request<Group[]>('GET', '/api/groups'),
-  // Admin: the same endpoint in the shape the server actually sends (UI-API-GUIDE.md §1, §2d).
-  listGroupSummaries: () => request<GroupSummary[]>('GET', '/api/groups'),
   listCustomers: () => request<Customer[]>('GET', '/api/customers'),
   createGroup: (name: string, numbers: string[]) =>
     request<{ id: string; name: string; numbers: string[] }>('POST', '/api/groups', { name, numbers }),
@@ -82,7 +79,6 @@ const sampleApi: typeof serverApi = {
   listBusinessNumbers: () => sample(() => sampleServer.listBusinessNumbers()),
   registerBusinessNumber: (display_number, label) => sample(() => sampleServer.registerBusinessNumber(display_number, label)),
   listGroups: () => sample(() => sampleServer.listGroups()),
-  listGroupSummaries: () => sample(() => sampleServer.listGroupSummaries()),
   listCustomers: () => sample(() => sampleServer.listCustomers()),
   createGroup: (name, numbers) => sample(() => sampleServer.createGroup(name, numbers)),
   deleteBusinessNumber: (phone_number_id) => sample(() => sampleServer.deleteBusinessNumber(phone_number_id)),

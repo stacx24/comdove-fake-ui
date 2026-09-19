@@ -101,27 +101,30 @@ export default function Launch() {
               <Link to="/admin">Go to Admin</Link>
             </div>
           ) : (
-            groups.map((g) => (
-              <button
-                key={g.name}
-                type="button"
-                className={styles.row}
-                data-testid={`group-${g.name}`}
-                disabled={g.locked}
-                title={g.locked ? 'Open in another session' : undefined}
-                onClick={() => navigate(`/client?group=${encodeURIComponent(g.name)}`)}
-              >
-                <div className={styles.nameBlock}>
-                  <span className={styles.name}>{g.name}</span>
-                  <span className={`${styles.url} mono`}>/client?group={g.name}</span>
-                </div>
-                <span className={`${styles.count} mono`}>{g.numbers.length} numbers</span>
-                <span className={`${styles.pill} ${g.locked ? '' : styles.free}`}>
-                  <span className={styles.pillDot} />
-                  <span>{g.locked ? 'locked' : 'free'}</span>
-                </span>
-              </button>
-            ))
+            groups.map((g) => {
+              const locked = g.status === 'locked'
+              return (
+                <button
+                  key={g.id}
+                  type="button"
+                  className={styles.row}
+                  data-testid={`group-${g.name}`}
+                  disabled={locked}
+                  title={locked ? 'Open in another session' : undefined}
+                  onClick={() => navigate(`/client?group=${encodeURIComponent(g.id)}`)}
+                >
+                  <div className={styles.nameBlock}>
+                    <span className={styles.name}>{g.name}</span>
+                    <span className={`${styles.url} mono`}>/client?group={g.id}</span>
+                  </div>
+                  <span className={`${styles.count} mono`}>{g.count} numbers</span>
+                  <span className={`${styles.pill} ${locked ? '' : styles.free}`}>
+                    <span className={styles.pillDot} />
+                    <span>{locked ? 'locked' : 'free'}</span>
+                  </span>
+                </button>
+              )
+            })
           )}
         </div>
       </div>

@@ -1,12 +1,12 @@
 // In-browser stand-in for the mock server's control API (any VITE_DATA_SOURCE other than "server").
 // Keeps changes in memory until the page is reloaded, and fails with the same
 // { error: { message } } messages and status codes the real server sends (UI-API-GUIDE.md).
-import type { BusinessNumber, Customer, Group, GroupSummary, LogEntry } from '../types'
+import type { BusinessNumber, Customer, Group, LogEntry } from '../types'
 import { checkGroupName, checkGroupNumbers, checkPhone } from '../validation'
-import { sampleBusinessNumbers, sampleGroups, sampleLog } from './sampleData'
+import { sampleBusinessNumbers, sampleGroups, sampleLog, type SampleGroup } from './sampleData'
 
 let businessNumbers: BusinessNumber[] = structuredClone(sampleBusinessNumbers)
-let groups: Group[] = structuredClone(sampleGroups)
+let groups: SampleGroup[] = structuredClone(sampleGroups)
 let log: LogEntry[] = structuredClone(sampleLog)
 
 export class SampleError extends Error {
@@ -53,11 +53,9 @@ export const sampleServer = {
     return later({ phone_number_id: created.phone_number_id, token: created.token })
   },
 
-  listGroups: () => later(groups),
-
-  listGroupSummaries: () =>
+  listGroups: () =>
     later(
-      groups.map((g): GroupSummary => ({
+      groups.map((g): Group => ({
         id: g.name,
         name: g.name,
         count: g.numbers.length,
@@ -89,7 +87,7 @@ export const sampleServer = {
     const taken = numbers.find(isKnownNumber)
     if (taken) fail(`${taken} is already registered.`, 409)
 
-    const created: Group = { name, numbers, locked: false }
+    const created: SampleGroup = { name, numbers, locked: false }
     groups = [...groups, created]
     return later({ id: name, name, numbers })
   },

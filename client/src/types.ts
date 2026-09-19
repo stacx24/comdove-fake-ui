@@ -18,24 +18,18 @@ export interface BusinessNumber {
   token: string
 }
 
+// GET /api/groups as the server sends it (UI-API-GUIDE.md §1, API Reference). `id` is what
+// /client?group= and DELETE /api/groups/{id} use; `locked_since` is unix milliseconds.
 export interface Group {
-  name: string
-  numbers: string[]
-  locked: boolean
-  since?: number
-}
-
-// ---- Admin: shapes from the server team's UI-API-GUIDE.md (§2b, §2e) ----
-// Times here are unix *milliseconds*, unlike ChatMessage.timestamp.
-
-// GET /api/groups as the server sends it (the client pages still use `Group`).
-export interface GroupSummary {
   id: string
   name: string
   count: number
   status: 'free' | 'locked'
   locked_since: number | null
 }
+
+// ---- Admin: shapes from the server team's UI-API-GUIDE.md (§2b, §2e) ----
+// Times here are unix *milliseconds*, unlike ChatMessage.timestamp.
 
 // GET /api/customers
 export interface Customer {

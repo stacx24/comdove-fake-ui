@@ -21,16 +21,17 @@ afterEach(() => {
 
 describe('mock data shape', () => {
   it('has the four groups, with beta locked', () => {
-    expect(groups.map((g) => [g.name, g.numbers.length, g.locked])).toEqual([
-      ['alpha', 8, false],
-      ['beta', 10, true],
-      ['gamma', 5, false],
-      ['load-test', 10, false],
+    expect(groups.map((g) => [g.id, g.name, g.count, g.status])).toEqual([
+      ['alpha', 'alpha', 8, 'free'],
+      ['beta', 'beta', 10, 'locked'],
+      ['gamma', 'gamma', 5, 'free'],
+      ['load-test', 'load-test', 10, 'free'],
     ])
+    expect(groups[1].locked_since).toBeGreaterThan(1e12) // milliseconds, like the server
   })
 
-  it('has one tile per group number, in the same order', () => {
-    for (const g of groups) expect(tilesByGroup[g.name].map((t) => t.number)).toEqual(g.numbers)
+  it('has one tile per group number', () => {
+    for (const g of groups) expect(tilesByGroup[g.id]).toHaveLength(g.count)
   })
 
   it('only has messages between the tile and a business number', () => {

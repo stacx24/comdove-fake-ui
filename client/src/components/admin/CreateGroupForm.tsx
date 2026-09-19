@@ -3,15 +3,15 @@
 // POST /api/groups — the numbers become customer numbers on the server.
 import { useState, type FormEvent } from 'react'
 import { api } from '../../api'
-import type { GroupSummary } from '../../types'
+import type { Group } from '../../types'
 import { checkGroupName, checkGroupNumbers, MAX_GROUP_SIZE, parseNumberList } from '../../validation'
 
 interface Props {
-  groups: GroupSummary[]
+  groups: Group[]
   groupExists: (name: string) => boolean
   isKnownNumber: (number: string) => boolean
   onCreated: () => void
-  onDeleteGroup: (group: GroupSummary) => void
+  onDeleteGroup: (group: Group) => void
 }
 
 export default function CreateGroupForm({ groups, groupExists, isKnownNumber, onCreated, onDeleteGroup }: Props) {

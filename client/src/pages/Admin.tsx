@@ -7,12 +7,12 @@ import MessageLog from '../components/admin/MessageLog'
 import NumbersTable from '../components/admin/NumbersTable'
 import RegisterNumberForm from '../components/admin/RegisterNumberForm'
 import ResetDialog from '../components/admin/ResetDialog'
-import type { BusinessNumber, Customer, GroupSummary } from '../types'
+import type { BusinessNumber, Customer, Group } from '../types'
 
 export default function Admin() {
   const [businessNumbers, setBusinessNumbers] = useState<BusinessNumber[]>([])
   const [customers, setCustomers] = useState<Customer[]>([])
-  const [groups, setGroups] = useState<GroupSummary[]>([])
+  const [groups, setGroups] = useState<Group[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [logKey, setLogKey] = useState(0)
@@ -24,7 +24,7 @@ export default function Admin() {
       const [numbers, customerList, groupList] = await Promise.all([
         api.listBusinessNumbers(),
         api.listCustomers(),
-        api.listGroupSummaries(),
+        api.listGroups(),
       ])
       setBusinessNumbers(numbers)
       setCustomers(customerList)

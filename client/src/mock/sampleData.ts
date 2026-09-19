@@ -1,6 +1,6 @@
 // Sample data used while the mock server is not ready (VITE_DATA_SOURCE=sample).
 // Mirrors the "Comdove Mock UI" design.
-import type { BusinessNumber, Group, LogEntry, MessageStatus, WebhookDelivery } from '../types'
+import type { BusinessNumber, LogEntry, MessageStatus, WebhookDelivery } from '../types'
 
 export const sampleBusinessNumbers: BusinessNumber[] = [
   { display_number: '918888800001', label: 'Sales', phone_number_id: 'MOCK-PN-1', token: 'mock_tok_9f3a1c7e2b4d' },
@@ -11,7 +11,15 @@ export const sampleBusinessNumbers: BusinessNumber[] = [
 const numbersFrom = (first: number, count: number) =>
   Array.from({ length: count }, (_, i) => String(first + i))
 
-export const sampleGroups: Group[] = [
+// The sample server keeps each group's members; GET /api/groups only returns the count.
+export interface SampleGroup {
+  name: string
+  numbers: string[]
+  locked: boolean
+  since?: number // unix seconds
+}
+
+export const sampleGroups: SampleGroup[] = [
   { name: 'alpha', numbers: numbersFrom(919876543210, 8), locked: false },
   { name: 'beta', numbers: numbersFrom(919876543220, 10), locked: true, since: 1758270300 },
   { name: 'gamma', numbers: numbersFrom(919876543230, 5), locked: false },

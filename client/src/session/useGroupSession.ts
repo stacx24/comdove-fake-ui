@@ -109,11 +109,11 @@ export function useGroupSession(group: string): GroupSession {
     data.listGroups().then(
       (groups) => {
         if (cancelled) return
-        const found = groups.find((g) => g.name === group)
+        const found = groups.find((g) => g.id === group)
         if (!found) return setCheck('not-found')
         setCheck('ok')
-        if (found.locked) {
-          dispatch({ type: 'group.locked', group, since: found.since ?? 0 })
+        if (found.status === 'locked') {
+          dispatch({ type: 'group.locked', group, since: found.locked_since ?? 0 })
           return
         }
         connection = data.connectGroup(group, {
