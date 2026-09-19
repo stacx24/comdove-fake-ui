@@ -38,8 +38,8 @@ Field names the UI already uses. Please confirm or tell us yours. They live in `
 
 | # | Feature | Spec today | Suggestion |
 |---|---|---|---|
-| Q4 | **Webhook result per status.** Sent, delivered and read each send their own webhook (Tech Spec §5: "one webhook per transition"; "every attempt and outcome shows in the admin log") | One `webhook` per log row can't show three | Put the outcome on each entry in `statuses[]`, with every attempt |
+| Q4 | ✅ **Answered** (UI-API-GUIDE §2e: `webhooks[]` per kind with `attempts[]`). Still open: all `state` values, and how a queued message shows. **Webhook result per status.** Sent, delivered and read each send their own webhook (Tech Spec §5: "one webhook per transition"; "every attempt and outcome shows in the admin log") | One `webhook` per log row can't show three | Put the outcome on each entry in `statuses[]`, with every attempt |
 | Q5 | **Live admin log** (PRD §4 C5: "HTTP + WebSocket for live log") | No admin event in Tech Spec §7 | A `log.update` event on `/ws` for admin, or keep the 3s refresh |
 | Q6 | **Webhook address and handshake result** in the top bar (Tech Spec §5 handshake, §8 `COMDOVE_WEBHOOK_URL`) | No call returns them | `GET /api/config` → `{ webhook_url, handshake: { ok, http_status, checked_at } }` |
-| Q7 | **Delete numbers and groups** (PRD §4 C5: "register/delete") | No delete call in Tech Spec §6 | `DELETE /api/business-numbers/{phone_number_id}`, `DELETE /api/groups/{name}` |
+| Q7 | ✅ **Answered** (UI-API-GUIDE §2c). **Delete numbers and groups** (PRD §4 C5: "register/delete") | No delete call in Tech Spec §6 | `DELETE /api/business-numbers/{phone_number_id}`, `DELETE /api/groups/{name}` |
 | Q8 | **Rejected Comdove sends in the log** (bad token, forced errors; PRD §10 demo) | Not said whether they're logged | Log them with `status: "failed"` and the Meta error code |

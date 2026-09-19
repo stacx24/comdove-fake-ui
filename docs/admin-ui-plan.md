@@ -176,10 +176,10 @@ Look: dark background, gold accent (#E4B063), fonts Instrument Sans and JetBrain
 
 | # | Item | Why | Source |
 |---|---|---|---|
-| 1 | **One webhook per status.** A message can have 3 webhook results (sent, delivered, read). Show the latest in the row and all attempts when the row is clicked. | Spec says "one webhook per transition" and "every attempt and outcome shows in the admin log" | Tech Spec §5 |
+| 1 | ✅ **Answered by the server guide → planned in §11.1.** **One webhook per status.** A message can have 3 webhook results (sent, delivered, read). Show the latest in the row and all attempts when the row is clicked. | Spec says "one webhook per transition" and "every attempt and outcome shows in the admin log" | Tech Spec §5 |
 | 2 | **Live log over WebSocket** instead of the 3-second refresh | PRD says admin uses "HTTP + WebSocket for live log", but the Spec defines no admin WebSocket event | PRD §4 C5 vs Tech Spec §7 |
 | 3 | **Server call for top bar info** (webhook address + handshake result), e.g. `GET /api/config` | Nothing returns them today | Tech Spec §5, §8 |
-| 4 | **Delete numbers and groups** | PRD says "register/delete", Spec has no delete call | PRD §4 C5 vs Tech Spec §6 |
+| 4 | ✅ **Answered by the server guide → planned in §11.2.** **Delete numbers and groups** | PRD says "register/delete", Spec has no delete call | PRD §4 C5 vs Tech Spec §6 |
 | 5 | **Show rejected Comdove sends** (401, 400, forced errors) in the log | Helps the "trigger one error case" demo step | PRD §10, Tech Spec §4 |
 | 6 | **Test helper calls in admin** (inject message, set presence) | Spec lists them for automation; PRD doesn't need them in the UI | Tech Spec §6 |
 | 7 | **Agree the exact shapes** of the log row webhook result and the group "claim" info, and write them in the README | The Spec doesn't define them | Tech Spec §6 |
@@ -200,3 +200,67 @@ All open questions for the server team are collected in **[server-team-questions
 | `src/components/admin/NumbersTable.tsx`, forms | Delete buttons | Item 4 |
 | `src/components/Shell.tsx` | Real webhook status (client-owned file; agree with the client dev) | Item 3 |
 | `README.md` | The agreed shapes | Always |
+
+---
+
+## 11. Next build: from the server team's guide (Q4, Q7)
+
+Source: **`UI-API-GUIDE.md`** from the server team (Person 2, control API), 2026-09-19, sections 2c and 2e.
+Status: **planned, not built.** Works in sample mode first, like everything else; the switch to the server stays one `.env` value.
+
+### 11.1 Webhook result per status (Q4)
+
+**What the server sends.** `GET /api/log?limit=100`, newest first. Each row has one webhook entry **per status** (sent, delivered, read), and each entry lists **every attempt**:
+
+| Field | Meaning |
+|---|---|
+| `wamid` | Message ID |
+| `time` | When the message was created, **milliseconds** |
+| `from`, `to`, `body`, `status` | As before |
+| `timeline[]` | `{ status, at }`: each status reached, `at` in **milliseconds** |
+| `webhooks[]` | `{ kind: "sent" \| "delivered" \| "read", state, attempts[] }` |
+| `attempts[]` | `{ n, http_status, duration_ms, at }` |
+| also | `direction`, `source`, `business {phone_number_id, label}`, `group_id` (not shown yet) |
+
+**What changes in the UI.**
+- **Row (unchanged look):** the Webhook column shows the **latest** webhook's **last attempt**, as the guide says: green `200 · 84ms`, orange `retry 2/3 · 500`, or grey `queued · tile offline`.
+- **Click a row → detail panel under it** (new): one line per webhook kind, e.g.
+  `SENT   #1 200 · 84ms · 10:04:31`
+  `READ   #1 500 · 5002ms · 10:04:40   #2 200 · 91ms · 10:04:41`
+  Click again to close. `data-testid`: `log-row-{wamid}` (clickable) and `log-detail-{wamid}`.
+- **Times** come from `time` / `at` in milliseconds (today we expect seconds, which would show "Invalid Date").
+- **Status chips** stay as they are (from `status`); the timeline gives the time each one was reached, shown in the detail panel.
+
+**Files.** `types.ts` (new log shape), `mock/sampleData.ts` (sample log in the new shape, including one retried and one queued webhook), `mock/sampleServer.ts`, `components/admin/MessageLog.tsx`, `index.css` (detail panel).
+
+**Still to ask the server team:** the full list of `state` values (the guide only shows `"ok"`), and how a queued message shows (`state: "pending"`? no `webhooks` entry yet?).
+
+### 11.2 Delete numbers and groups (Q7)
+
+**What the server offers.**
+- `DELETE /api/business-numbers/{phone_number_id}` → 204
+- `DELETE /api/groups/{id}` → 204, or **409 if the group is open** in a browser
+
+**What changes in the UI.**
+- **Business number:** a small **Delete** button on each business row in the Registered numbers table (next to Copy). `data-testid="delete-number-{number}"`.
+- **Group:** the design has no list of groups, and deleting from a customer row would be confusing (it removes all 10 numbers). **Proposal:** a compact **Client groups** list at the bottom of the Create group card: name, `N numbers`, free/locked pill, **Delete**. `data-testid="group-row-{name}"`, `delete-group-{name}`. Locked groups can still be tried; the server's 409 decides.
+- **Confirm first**, like Reset: "Delete +918888800004 (Sales)? Comdove can no longer send from it." / "Delete group alpha and its 8 customer numbers?". `data-testid`: `delete-dialog`, `delete-cancel`, `delete-confirm`.
+- **Errors:** 409 on a group → "Group alpha is open in a browser — close it first." Any other error shows the server's message, as in §3.6.
+- **After success:** re-fetch the numbers table (and the groups list).
+
+**Files.** `api.ts` (two delete calls), `mock/sampleServer.ts` (same behaviour in sample mode, including 409 for a locked group), `components/admin/NumbersTable.tsx`, `components/admin/CreateGroupForm.tsx` (groups list), new `components/admin/DeleteDialog.tsx`, `pages/Admin.tsx`, `index.css`.
+
+### 11.3 Needed first (or both features break on the real server)
+
+Q4 and Q7 depend on the server's real shapes, so these come with them:
+- **Groups list shape:** the server sends `{ id, name, count, status: "free" | "locked", locked_since }` (no `numbers` list). Today the Admin page reads each group's numbers, so it **crashes** on the real server. Customer rows move to **`GET /api/customers`** (`number`, `label`, `group_id`, `claim_status`).
+- **Client page:** the same groups-list change breaks the launch page. That's the client dev's file; tell them.
+
+### 11.4 Checks
+
+- [ ] Log row shows the latest webhook's last attempt; clicking opens all attempts per status; times correct (ms)
+- [ ] Delete business number: confirm → row gone; cancel keeps it
+- [ ] Delete free group: confirm → group and its customer rows gone
+- [ ] Delete locked group: server/sample answers 409 → "open in a browser" message, nothing removed
+- [ ] All new buttons have `data-testid`; build and the 27 existing admin checks still pass
+
