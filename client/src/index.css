@@ -1,5 +1,4 @@
 /* Design tokens from the Comdove Mock UI design. Dark only. */
-/* Colours and sizes copied from the "Comdove Mock UI" design. */
 :root {
   --bg: #0e1116;
   --surface: #12161b;
@@ -40,26 +39,6 @@
 *,
 *::before,
 *::after {
-  --dim: #78858f;
-  --faint: #55626f;
-  --off: #3c4753;
-
-  --gold: #e4b063;
-  --gold-hover: #ebc27e;
-  --gold-light: #f0d199;
-  --green: #4dbe93;
-  --blue: #6c9bf5;
-  --orange: #e07a4e;
-  --red: #d9524a;
-
-  --radius: 10px;
-  --radius-sm: 5px;
-  --mono: 'JetBrains Mono', ui-monospace, monospace;
-
-  color-scheme: dark;
-}
-
-* {
   box-sizing: border-box;
 }
 
@@ -70,7 +49,6 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-ui);
-  font-family: 'Instrument Sans', system-ui, sans-serif;
   font-size: 13px;
   letter-spacing: -0.012em;
 }
@@ -91,13 +69,6 @@ button {
 
 input,
 select {
-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.55;
-}
-
-input,
-textarea {
   font: inherit;
 }
 
@@ -105,7 +76,6 @@ textarea {
   width: 6px;
   height: 6px;
 }
-
 ::-webkit-scrollbar-thumb {
   background: #2e3741;
   border-radius: 3px;
@@ -113,101 +83,41 @@ textarea {
 
 .mono {
   font-family: var(--font-mono);
-  font-family: var(--mono);
 }
 
-.app {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
+/* ==== Admin page (docs/admin-ui-plan.md) ====
+   Admin's own colour names. The client tokens above already define --faint as #78858f,
+   so admin's darker grey is --subtle. Admin base rules are scoped to .admin so they
+   don't change the client pages. */
+:root {
+  --dim: #78858f;
+  --subtle: #55626f;
+  --off: #3c4753;
+
+  --gold: #e4b063;
+  --gold-hover: #ebc27e;
+  --gold-light: #f0d199;
+  --green: #4dbe93;
+  --blue: #6c9bf5;
+  --orange: #e07a4e;
+  --red: #d9524a;
+
+  --radius: 10px;
+  --radius-sm: 5px;
+  --mono: 'JetBrains Mono', ui-monospace, monospace;
 }
 
-/* ---- Top bar ---- */
-
-.topbar {
-  height: 48px;
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  padding: 0 20px;
-  border-bottom: 1px solid var(--border);
-  background: var(--surface);
-  flex-shrink: 0;
+.admin {
+  color-scheme: dark;
 }
 
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+.admin button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
-.brand-logo {
-  width: 22px;
-  height: 22px;
-  border-radius: 5px;
-  background: var(--gold);
-  color: var(--bg);
-  font-weight: 600;
-  font-size: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.brand-name {
-  font-weight: 600;
-  font-size: 14px;
-}
-
-.brand-server {
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--dim);
-}
-
-.nav {
-  display: flex;
-  gap: 4px;
-  margin-left: 12px;
-}
-
-.nav-link {
-  height: 30px;
-  padding: 0 12px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
-  color: var(--text-2);
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  text-decoration: none;
-}
-
-.nav-link:hover {
-  background: var(--hover);
-}
-
-.nav-link.active {
-  background: rgba(228, 176, 99, 0.12);
-  border-color: rgba(228, 176, 99, 0.5);
-  color: var(--gold-light);
-}
-
-.nav-path {
-  font-family: var(--mono);
-  font-size: 11px;
-  opacity: 0.6;
-}
-
-.webhook-status {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 11px;
-  color: var(--muted);
-  white-space: nowrap;
+.admin textarea {
+  font: inherit;
 }
 
 /* ---- Shared bits ---- */
@@ -565,11 +475,5 @@ textarea.input {
 
   .admin {
     padding: 16px;
-  }
-
-  .topbar {
-    gap: 12px;
-    padding: 0 16px;
-    overflow-x: auto;
   }
 }

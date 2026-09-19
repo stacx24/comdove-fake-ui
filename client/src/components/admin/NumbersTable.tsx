@@ -108,7 +108,7 @@ export default function NumbersTable({ businessNumbers, groups, loading, error }
               </span>
             </div>
             <div
-              style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: row.live ? 'var(--green)' : 'var(--faint)' }}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: row.live ? 'var(--green)' : 'var(--subtle)' }}
             >
               <span className="dot dot-sm" style={{ background: 'currentColor' }} />
               <span>{row.claim}</span>

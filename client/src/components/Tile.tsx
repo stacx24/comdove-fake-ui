@@ -69,11 +69,98 @@ export default function Tile({ tile, businessNumbers, actions, autoReply, paused
   }
 
   return (
-    <section data-testid={`tile-${number}`}>
-      <h2>{number}</h2>
-      <h2>whyy</h2>
+    <section className={`${styles.tile} ${tile.online ? styles.online : ''}`} data-testid={`tile-${n}`}>
+      <header className={styles.header}>
+        <button
+          type="button"
+          className={styles.presence}
+          data-testid={`presence-${n}`}
+          title={tile.online ? 'Online — click to go offline' : 'Offline — click to go online'}
+          aria-pressed={tile.online}
+          onClick={() => actions.setPresence(n, !tile.online)}
+        >
+          <span className={styles.presenceDot} />
+        </button>
+        <div className={`${styles.number} mono`}>{plus(n)}</div>
+        {unreadCount > 0 && (
+          <div className={`${styles.unread} mono`} data-testid={`unread-${n}`} title="Unread">
+            {unreadCount}
+          </div>
+        )}
+        {tile.queued.length > 0 && (
+          <div className={styles.queued} data-testid={`queued-${n}`}>
+            {tile.queued.length} queued
+          </div>
+        )}
+        <div
+          className={`${styles.mode} ${autoReply.mode !== 'manual' ? styles.modeAuto : ''}`}
+          data-testid={`mode-${n}`}
+        >
+          {autoReply.mode}
+        </div>
+        <button
+          ref={gearRef}
+          type="button"
+          className={`${styles.gear} ${settingsOpen ? styles.gearOpen : ''}`}
+          data-testid={`autoreply-${n}`}
+          title="Auto-reply mode"
+          aria-expanded={settingsOpen}
+          onClick={() => setSettingsOpen((o) => !o)}
+        >
+          ⚙
+        </button>
+      </header>
+
+      {settingsOpen && (
+        <AutoReplyPopover
+          number={n}
+          config={autoReply}
+          onChange={(c) => actions.setAutoReply(n, c)}
+          onClose={closeSettings}
+          anchor={gearRef}
+        />
+      )}
+
+      <div
+        ref={chatRef}
+        className={styles.chat}
+        data-testid={`chat-${n}`}
+        onScroll={onScroll}
+        onClick={() => unreadCount > 0 && markRead()}
+      >
+        {tile.history.length === 0 ? (
+          <div className={styles.empty}>No messages yet</div>
+        ) : (
+          tile.history.map((m) => (
+            <Bubble key={m.wamid} m={m} own={m.from === n} sender={multiPeer ? label(m.from) : null} onRetry={actions.retry} />
+          ))
+        )}
+      </div>
+
+      {paused && (
+        <div className={styles.paused} data-testid={`autoreply-paused-${n}`}>
+          Auto-reply paused (loop guard)
+        </div>
+      )}
+
+      <div className={styles.composer}>
+        <div className={styles.sendRow}>
+          <input
+            className={styles.input}
+            data-testid={`input-${n}`}
+            placeholder={tile.online ? 'Message as customer…' : 'Offline'}
+            value={draft}
+            disabled={!tile.online}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={onKey}
+            onFocus={() => unreadCount > 0 && markRead()}
+          />
+          <button type="button" className={styles.send} data-testid={`send-${n}`} disabled={!canSend} onClick={send}>
+            Send
+          </button>
+        </div>
+      </div>
     </section>
-    
   )
 }
 
