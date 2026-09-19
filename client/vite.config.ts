@@ -14,6 +14,8 @@ export default defineConfig(({ mode }) => {
     define: {
       __MOCK_SERVER_URL__: JSON.stringify(target.replace(/^https?:\/\//, '')),
     },
+    // Shown in the top bar so testers can see which mock server they are on.
+    define: { __MOCK_SERVER_URL__: JSON.stringify(target) },
     server: {
       port: 5173,
       proxy: {

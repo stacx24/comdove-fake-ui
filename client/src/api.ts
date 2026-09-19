@@ -1,37 +1,78 @@
-// Control API client (Tech Spec §6). No auth; errors come back as { error: { message } }.
+// Control API client (Tech Spec §6). The only place the UI talks to the mock server.
+// VITE_DATA_SOURCE picks the backend: "sample" (built-in fake data, the default) or "server".
+import { SampleError, sampleServer } from './mock/sampleServer'
 import type { BusinessNumber, Group, LogEntry } from './types'
 
+export const dataSource = import.meta.env.VITE_DATA_SOURCE === 'server' ? 'server' : 'sample'
+
+// The server keeps this in its own .env and does not expose it yet (plan §3.0).
+export const webhookUrl = import.meta.env.VITE_WEBHOOK_URL || 'http://localhost:3000/webhooks/whatsapp'
+
+// Every failure reaches the UI as an ApiError whose message can be shown as-is.
+export class ApiError extends Error {}
+
+const unreachable = `Mock server not reachable at ${__MOCK_SERVER_URL__.replace(/^https?:\/\//, '')}.`
+
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
-  const res = await fetch(path, {
-    method,
-    headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  })
+  let res: Response
+  try {
+    res = await fetch(path, {
+      method,
+      headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    })
+  } catch {
+    throw new ApiError(unreachable)
+  }
+
   const text = await res.text()
-  const data = text ? JSON.parse(text) : undefined
+  let data: unknown
+  try {
+    data = text ? JSON.parse(text) : undefined
+  } catch {
+    data = undefined
+  }
+
   if (!res.ok) {
-    throw new Error(data?.error?.message ?? `${method} ${path} failed with ${res.status}`)
+    const message = (data as { error?: { message?: string } } | undefined)?.error?.message
+    if (message) throw new ApiError(message)
+    // The Vite proxy answers 5xx with no body when the server is down.
+    throw new ApiError(res.status >= 500 ? unreachable : `${method} ${path} failed (${res.status}).`)
   }
   return data as T
 }
 
-export const api = {
+async function sample<T>(call: () => Promise<T>): Promise<T> {
+  try {
+    return await call()
+  } catch (err) {
+    throw err instanceof SampleError ? new ApiError(err.message) : err
+  }
+}
+
+const serverApi = {
   listBusinessNumbers: () => request<BusinessNumber[]>('GET', '/api/business-numbers'),
   registerBusinessNumber: (display_number: string, label: string) =>
-    request<{ phone_number_id: string; token: string }>('POST', '/api/business-numbers', {
-      display_number,
-      label,
-    }),
-
+    request<{ phone_number_id: string; token: string }>('POST', '/api/business-numbers', { display_number, label }),
   listGroups: () => request<Group[]>('GET', '/api/groups'),
-  createGroup: (name: string, numbers: string[]) =>
-    request<Group>('POST', '/api/groups', { name, numbers }),
-
-  setPresence: (number: string, online: boolean) =>
-    request<void>('POST', '/api/presence', { number, online }),
-  inject: (from: string, to: string, body: string) =>
-    request<{ wamid: string }>('POST', '/api/inject', { from, to, body }),
-
+  createGroup: (name: string, numbers: string[]) => request<Group>('POST', '/api/groups', { name, numbers }),
+  setPresence: (number: string, online: boolean) => request<void>('POST', '/api/presence', { number, online }),
+  inject: (from: string, to: string, body: string) => request<{ wamid: string }>('POST', '/api/inject', { from, to, body }),
   log: (limit = 100) => request<LogEntry[]>('GET', `/api/log?limit=${limit}`),
   reset: (keep_numbers = true) => request<void>('POST', '/api/reset', { keep_numbers }),
 }
+
+const sampleApi: typeof serverApi = {
+  listBusinessNumbers: () => sample(() => sampleServer.listBusinessNumbers()),
+  registerBusinessNumber: (display_number, label) => sample(() => sampleServer.registerBusinessNumber(display_number, label)),
+  listGroups: () => sample(() => sampleServer.listGroups()),
+  createGroup: (name, numbers) => sample(() => sampleServer.createGroup(name, numbers)),
+  setPresence: async () => {},
+  inject: async () => {
+    throw new ApiError('Inject needs the real mock server (VITE_DATA_SOURCE=server).')
+  },
+  log: (limit = 100) => sample(() => sampleServer.log(limit)),
+  reset: (keep_numbers = true) => sample(() => sampleServer.reset(keep_numbers)),
+}
+
+export const api = dataSource === 'server' ? serverApi : sampleApi

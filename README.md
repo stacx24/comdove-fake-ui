@@ -10,9 +10,18 @@ React + Vite + TypeScript, React Router, native WebSocket.
 ```bash
 cd client
 npm install
-cp .env.example .env   # MOCK_SERVER_URL, default http://localhost:4020
+cp .env.example .env   # see settings below
 npm run dev            # http://localhost:5173
 ```
+
+### Settings (`client/.env`)
+| Variable | Default | Meaning |
+|---|---|---|
+| `MOCK_SERVER_URL` | `http://localhost:4020` | Mock server the dev server proxies `/api` and `/ws` to |
+| `VITE_DATA_SOURCE` | `sample` | `sample` = built-in fake data (no server needed), `server` = real mock server |
+| `VITE_WEBHOOK_URL` | `http://localhost:3000/webhooks/whatsapp` | Comdove webhook shown in the top bar (the server doesn't expose it yet) |
+
+In `sample` mode, Register, Create group and Reset work in memory until the page is reloaded.
 The dev server proxies `/api` and `/ws` to the mock server, so no server address is hardcoded.
 
 ## Structure
@@ -20,12 +29,18 @@ The dev server proxies `/api` and `/ws` to the mock server, so no server address
 client/src/
   pages/Launch.tsx       /client            group list, free/locked
   pages/ClientGrid.tsx   /client?group=x    tile grid for one group
-  pages/Admin.tsx        /admin             numbers, live log, reset
+  pages/Admin.tsx        /admin             numbers, groups, live log, reset
+  components/TopBar.tsx  shared top bar
+  components/admin/      admin sections (register, create group, numbers, log, reset)
   components/Tile.tsx    one customer number
+  mock/                  sample data + in-browser stand-in server
   api.ts                 control API calls
   ws.ts                  WebSocket connection
   types.ts               message shapes from the spec
+  validation.ts          number / group-name checks
 ```
+
+Plans: [`docs/admin-ui-plan.md`](docs/admin-ui-plan.md)
 
 ## Branches
 - `main` — base setup
