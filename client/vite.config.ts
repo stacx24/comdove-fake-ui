@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import react from '@vitejs/plugin-react'
 import { defineConfig, loadEnv } from 'vite'
 
@@ -9,6 +10,10 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react()],
+    // Shown in the top bar. MOCK_SERVER_URL has no VITE_ prefix, so it has to be passed in here.
+    define: {
+      __MOCK_SERVER_URL__: JSON.stringify(target.replace(/^https?:\/\//, '')),
+    },
     // Shown in the top bar so testers can see which mock server they are on.
     define: { __MOCK_SERVER_URL__: JSON.stringify(target) },
     server: {
@@ -17,6 +22,9 @@ export default defineConfig(({ mode }) => {
         '/api': { target, changeOrigin: true },
         '/ws': { target, ws: true, changeOrigin: true },
       },
+    },
+    test: {
+      environment: 'node',
     },
   }
 })
