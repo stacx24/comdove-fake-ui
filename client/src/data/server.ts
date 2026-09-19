@@ -1,5 +1,7 @@
 // DataSource backed by the real mock server: Control API over HTTP, group session over WebSocket.
 import { api } from '../api'
+import { sanitize } from '../autoreply/storage'
+import { FATAL_ERROR_CODES, type AutoReplyConfig, type ServerAutoReply } from '../types'
 import { connectGroup as openSocket } from '../ws'
 import type { DataSource, GroupConnection, GroupHandlers } from './types'
 
@@ -18,8 +20,9 @@ function connectGroup(group: string, handlers: GroupHandlers): GroupConnection {
   const open = () => {
     if (stopped) return
     const conn = openSocket(group, (event) => {
-      // The server refused the claim: don't keep reconnecting into the same lock.
+      // The server refused the claim, or the group is gone: don't keep reconnecting into it.
       if (event.type === 'group.locked') stop()
+      if (event.type === 'error' && (FATAL_ERROR_CODES as readonly string[]).includes(event.code)) stop()
       handlers.onEvent(event)
     })
     current = conn
@@ -69,8 +72,32 @@ function connectGroup(group: string, handlers: GroupHandlers): GroupConnection {
   }
 }
 
+// Auto-reply field names differ: ours `delayMs` / `keywords[{contains, reply}]`,
+// the server's `delay_ms` / `rules[{keyword, reply}]` (UI-API-GUIDE.md §3b).
+export function fromServerAutoReply(value: ServerAutoReply): AutoReplyConfig {
+  return sanitize({
+    mode: value.mode,
+    delayMs: value.delay_ms,
+    keywords: (value.rules ?? []).map((r) => ({ contains: r.keyword, reply: r.reply })),
+  })
+}
+
+export function toServerAutoReply(config: AutoReplyConfig): ServerAutoReply {
+  return {
+    mode: config.mode,
+    delay_ms: config.delayMs,
+    // Rows still being typed (no keyword yet) stay in the panel but aren't sent.
+    rules: config.keywords.filter((k) => k.contains.trim()).map((k) => ({ keyword: k.contains.trim(), reply: k.reply })),
+  }
+}
+
 export const serverSource: DataSource = {
   listGroups: api.listGroups,
   listBusinessNumbers: api.listBusinessNumbers,
   connectGroup,
+  autoReplyOnServer: true,
+  getAutoReply: async (number) => fromServerAutoReply(await api.getAutoReply(number)),
+  saveAutoReply: async (number, config) => {
+    await api.putAutoReply(number, toServerAutoReply(config))
+  },
 }

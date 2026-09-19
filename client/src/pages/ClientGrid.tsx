@@ -28,15 +28,15 @@ function GroupView({ group }: { group: string }) {
   const { state, check, checkError, businessNumbers, autoReply, paused, actions, recheck } = useGroupSession(group)
   const back = () => navigate('/client')
 
-  // Claim refused: back to the launch page, which shows the notice (Tech Spec §7).
+  // Claim refused, or the group was deleted: back to the launch page, which shows the notice (Tech Spec §7).
   useEffect(() => {
-    if (state.phase === 'locked') {
-      const refused: LaunchState = { refused: group }
-      navigate('/client', { replace: true, state: refused })
+    if (state.phase === 'locked' || state.phase === 'deleted') {
+      const next: LaunchState = state.phase === 'locked' ? { refused: group } : { deleted: group }
+      navigate('/client', { replace: true, state: next })
     }
   }, [state.phase, group, navigate])
 
-  if (check === 'not-found') {
+  if (check === 'not-found' || state.phase === 'not-found') {
     return (
       <div className={styles.message} data-testid="group-not-found">
         <span>
@@ -98,6 +98,23 @@ function GroupView({ group }: { group: string }) {
           )}
         </div>
       </div>
+
+      {state.notice && (
+        <div className={styles.notice} role="alert" data-testid="server-notice">
+          <span className={styles.noticeText}>
+            {state.notice.message} <span className={`${styles.noticeCode} mono`}>{state.notice.code}</span>
+          </span>
+          <button
+            type="button"
+            className={styles.noticeDismiss}
+            data-testid="server-notice-dismiss"
+            aria-label="Dismiss"
+            onClick={actions.dismissNotice}
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       <div className={styles.scroll}>
         <div className={styles.grid}>

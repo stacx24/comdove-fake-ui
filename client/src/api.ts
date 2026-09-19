@@ -1,7 +1,7 @@
 // Control API client (Tech Spec §6). The only place the UI talks to the mock server.
 // VITE_DATA_SOURCE picks the backend: "sample" (built-in fake data, the default) or "server".
 import { SampleError, sampleServer } from './mock/sampleServer'
-import type { BusinessNumber, Customer, Group, LogEntry } from './types'
+import type { BusinessNumber, Customer, Group, LogEntry, ServerAutoReply } from './types'
 
 export const dataSource = import.meta.env.VITE_DATA_SOURCE === 'server' ? 'server' : 'sample'
 
@@ -73,6 +73,11 @@ const serverApi = {
   inject: (from: string, to: string, body: string) => request<{ wamid: string }>('POST', '/api/inject', { from, to, body }),
   log: (limit = 100) => request<LogEntry[]>('GET', `/api/log?limit=${limit}`),
   reset: (keep_numbers = true) => request<void>('POST', '/api/reset', { keep_numbers }),
+  // UI-API-GUIDE.md §3b: the ⚙ panel reads and saves a tile's auto-reply on the server.
+  getAutoReply: (number: string) =>
+    request<ServerAutoReply>('GET', `/api/customers/${encodeURIComponent(number)}/auto-reply`),
+  putAutoReply: (number: string, config: ServerAutoReply) =>
+    request<ServerAutoReply>('PUT', `/api/customers/${encodeURIComponent(number)}/auto-reply`, config),
 }
 
 const sampleApi: typeof serverApi = {
@@ -89,6 +94,9 @@ const sampleApi: typeof serverApi = {
   },
   log: (limit = 100) => sample(() => sampleServer.log(limit)),
   reset: (keep_numbers = true) => sample(() => sampleServer.reset(keep_numbers)),
+  // Mock mode keeps auto-reply in the browser (data/mock.ts); these are never called there.
+  getAutoReply: async () => ({ mode: 'manual', delay_ms: 800, rules: [] }),
+  putAutoReply: async (_number, config) => config,
 }
 
 export const api = dataSource === 'server' ? serverApi : sampleApi

@@ -7,9 +7,10 @@ import styles from './Launch.module.css'
 
 const REFRESH_MS = 5000
 
-// Set by the grid when it sends the tester back from a locked group.
+// Set by the grid when it sends the tester back: from a locked group, or one that was deleted.
 export interface LaunchState {
   refused?: string
+  deleted?: string
 }
 
 export default function Launch() {
@@ -21,10 +22,14 @@ export default function Launch() {
   const [refused, setRefused] = useState<string | null>(
     () => (location.state as LaunchState | null)?.refused ?? null,
   )
+  const [deleted, setDeleted] = useState<string | null>(
+    () => (location.state as LaunchState | null)?.deleted ?? null,
+  )
 
   // Browsers keep history state across a reload; clear it so the notice shows only once.
   useEffect(() => {
-    if ((location.state as LaunchState | null)?.refused) {
+    const state = location.state as LaunchState | null
+    if (state?.refused || state?.deleted) {
       navigate(location.pathname + location.search, { replace: true, state: null })
     }
   }, [location, navigate])
@@ -75,6 +80,23 @@ export default function Launch() {
               data-testid="refused-dismiss"
               aria-label="Dismiss"
               onClick={() => setRefused(null)}
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
+        {deleted && (
+          <div className={styles.notice} role="status" data-testid="deleted-notice">
+            <span className={styles.noticeText}>
+              <span className="mono">{deleted}</span> was deleted.
+            </span>
+            <button
+              type="button"
+              className={styles.dismiss}
+              data-testid="deleted-dismiss"
+              aria-label="Dismiss"
+              onClick={() => setDeleted(null)}
             >
               ✕
             </button>

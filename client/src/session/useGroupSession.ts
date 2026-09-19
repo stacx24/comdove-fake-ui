@@ -1,7 +1,7 @@
 // One group's live session: checks the group, connects, folds events into state, exposes tile actions.
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
-import { LoopGuard, planReplies } from '../autoreply/engine'
-import { loadConfig, saveConfig } from '../autoreply/storage'
+import { DEFAULT_CONFIG, LoopGuard, planReplies } from '../autoreply/engine'
+import { loadConfig } from '../autoreply/storage'
 import { data, type GroupConnection } from '../data'
 import type { AutoReplyConfig, BusinessNumber, ServerEvent } from '../types'
 import { initialState, reducer, type SessionState, type UiMessage } from './reducer'
@@ -15,8 +15,10 @@ export interface TileActions {
   retry(message: UiMessage): void
   setPresence(number: string, online: boolean): void
   markRead(number: string, peer: string): void
-  /** Saves a tile's auto-reply settings (in this browser) and applies them at once. */
+  /** Applies a tile's auto-reply settings at once and saves them (browser in mock mode, server otherwise). */
   setAutoReply(number: string, config: AutoReplyConfig): void
+  /** Hides the server notice under the sub-header. */
+  dismissNotice(): void
 }
 
 export interface GroupSession {
@@ -33,6 +35,13 @@ export interface GroupSession {
 }
 
 const nowSeconds = () => Math.floor(Date.now() / 1000)
+
+// In server mode the ⚙ panel saves on the server; wait for typing to pause before each save.
+const SAVE_DEBOUNCE_MS = 400
+
+// Until the server's setting has loaded, a tile shows the default (manual).
+const initialConfig = (number: string) =>
+  data.autoReplyOnServer ? { ...DEFAULT_CONFIG, keywords: [] } : loadConfig(number)
 const newLocalId = () => crypto.randomUUID()
 
 export function useGroupSession(group: string): GroupSession {
@@ -48,7 +57,7 @@ export function useGroupSession(group: string): GroupSession {
   const [overrides, setOverrides] = useState<Record<string, AutoReplyConfig>>({})
   const [paused, setPaused] = useState<Record<string, boolean>>({})
   const autoReply = useMemo(
-    () => Object.fromEntries(state.order.map((n) => [n, overrides[n] ?? loadConfig(n)])),
+    () => Object.fromEntries(state.order.map((n) => [n, overrides[n] ?? initialConfig(n)])),
     [state.order, overrides],
   )
 
@@ -70,9 +79,18 @@ export function useGroupSession(group: string): GroupSession {
   // Every server event: plan auto-replies against the state *before* it, then apply it.
   const handleEvent = useCallback(
     (event: ServerEvent) => {
+      // The snapshot names the group's business numbers (API Reference): use them for labels.
+      if (event.type === 'group.claimed' && event.business_numbers?.length) setBusinessNumbers(event.business_numbers)
+
+      // With a server, the server answers for auto-reply tiles; replying here too would double them.
+      if (data.autoReplyOnServer) {
+        dispatch(event)
+        return
+      }
+
       const current = stateRef.current
       const { replies, paused: blocked } = planReplies(event, {
-        config: (n) => autoReplyRef.current[n] ?? loadConfig(n),
+        config: (n) => autoReplyRef.current[n] ?? initialConfig(n),
         isOnline: (n) => !!current.tiles[n]?.online,
         seen: (n, wamid) => !!current.tiles[n]?.history.some((m) => m.wamid === wamid),
         guard: guard.current,
@@ -136,14 +154,35 @@ export function useGroupSession(group: string): GroupSession {
     }
   }, [group, attempt, handleEvent])
 
-  // Pending auto-replies die with the page.
+  // Pending auto-replies and unsaved settings die with the page.
+  const saveTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>())
   useEffect(() => {
     const pending = timers.current
+    const saves = saveTimers.current
     return () => {
       pending.forEach(clearTimeout)
       pending.clear()
+      saves.forEach(clearTimeout)
+      saves.clear()
     }
   }, [])
+
+  // Server mode: load each tile's auto-reply setting once the group's tiles are known.
+  const tileList = state.order.join(',')
+  useEffect(() => {
+    if (!data.autoReplyOnServer || !tileList) return
+    let cancelled = false
+    for (const number of tileList.split(',')) {
+      data.getAutoReply(number).then(
+        // A change made in this tab while loading wins over the loaded value.
+        (config) => !cancelled && setOverrides((o) => (number in o ? o : { ...o, [number]: config })),
+        () => {}, // stays on the default; saving later reports any real problem
+      )
+    }
+    return () => {
+      cancelled = true
+    }
+  }, [tileList])
 
   useEffect(() => {
     let cancelled = false
@@ -173,8 +212,24 @@ export function useGroupSession(group: string): GroupSession {
   }, [])
 
   const setAutoReply = useCallback((number: string, config: AutoReplyConfig) => {
-    saveConfig(number, config)
     setOverrides((o) => ({ ...o, [number]: config }))
+
+    const save = () => {
+      saveTimers.current.delete(number)
+      data.saveAutoReply(number, config).catch((err: unknown) =>
+        dispatch({
+          type: 'local.notice',
+          notice: {
+            code: 'autoreply_not_saved',
+            message: `Auto-reply for +${number} not saved: ${err instanceof Error ? err.message : String(err)}`,
+          },
+        }),
+      )
+    }
+    clearTimeout(saveTimers.current.get(number))
+    if (data.autoReplyOnServer) saveTimers.current.set(number, setTimeout(save, SAVE_DEBOUNCE_MS))
+    else save()
+
     setPaused((p) => {
       if (!p[number]) return p
       const next = { ...p }
@@ -183,9 +238,11 @@ export function useGroupSession(group: string): GroupSession {
     })
   }, [])
 
+  const dismissNotice = useCallback(() => dispatch({ type: 'local.notice', notice: null }), [])
+
   const actions = useMemo<TileActions>(
-    () => ({ send, retry, setPresence, markRead, setAutoReply }),
-    [send, retry, setPresence, markRead, setAutoReply],
+    () => ({ send, retry, setPresence, markRead, setAutoReply, dismissNotice }),
+    [send, retry, setPresence, markRead, setAutoReply, dismissNotice],
   )
 
   // Starts a fresh group lookup (the Retry button after a failed check).

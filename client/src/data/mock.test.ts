@@ -198,3 +198,10 @@ describe('mockSource.connectGroup', () => {
     expect(events).toHaveLength(1)
   })
 })
+
+describe('mock auto-reply', () => {
+  it('runs in the browser, not on a server', () => {
+    expect(mockSource.autoReplyOnServer).toBe(false)
+  })
+})
+

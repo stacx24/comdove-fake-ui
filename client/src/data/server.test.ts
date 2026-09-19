@@ -150,3 +150,52 @@ describe('serverSource.connectGroup', () => {
     expect(FakeSocket.all).toHaveLength(2)
   })
 })
+
+describe('server errors on the socket', () => {
+  for (const code of ['already_claimed', 'group_deleted', 'unknown_group']) {
+    it(`stops reconnecting after ${code}`, async () => {
+      const source = await load()
+      const t = track()
+      source.connectGroup('alpha', t.handlers)
+      FakeSocket.all[0].serverOpens()
+      FakeSocket.all[0].serverSends({ type: 'error', code, message: 'x' })
+      FakeSocket.all[0].close()
+      vi.advanceTimersByTime(30_000)
+      expect(FakeSocket.all).toHaveLength(1)
+      expect(t.events).toEqual([{ type: 'error', code, message: 'x' }])
+    })
+  }
+
+  it('keeps reconnecting after a non-fatal error', async () => {
+    const source = await load()
+    source.connectGroup('alpha', track().handlers)
+    FakeSocket.all[0].serverOpens()
+    FakeSocket.all[0].serverSends({ type: 'error', code: 'tile_offline', message: 'x' })
+    FakeSocket.all[0].close()
+    vi.advanceTimersByTime(1000)
+    expect(FakeSocket.all).toHaveLength(2)
+  })
+})
+
+describe('auto-reply field mapping (UI-API-GUIDE §3b)', () => {
+  it('maps the server shape to ours and back', async () => {
+    vi.resetModules()
+    const { fromServerAutoReply, toServerAutoReply } = await import('./server')
+    const ours = fromServerAutoReply({ mode: 'keyword', delay_ms: 500, rules: [{ keyword: 'price', reply: 'It is 500' }] })
+    expect(ours).toEqual({ mode: 'keyword', delayMs: 500, keywords: [{ contains: 'price', reply: 'It is 500' }] })
+    expect(toServerAutoReply(ours)).toEqual({ mode: 'keyword', delay_ms: 500, rules: [{ keyword: 'price', reply: 'It is 500' }] })
+  })
+
+  it('does not send rules that have no keyword yet', async () => {
+    vi.resetModules()
+    const { toServerAutoReply } = await import('./server')
+    const out = toServerAutoReply({ mode: 'keyword', delayMs: 0, keywords: [{ contains: ' ', reply: 'x' }, { contains: 'hi ', reply: 'hello' }] })
+    expect(out.rules).toEqual([{ keyword: 'hi', reply: 'hello' }])
+  })
+
+  it('says the server runs auto-reply', async () => {
+    const source = await load()
+    expect(source.autoReplyOnServer).toBe(true)
+  })
+})
+

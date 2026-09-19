@@ -229,3 +229,31 @@ describe('with the mock data', () => {
     expect([onlineCount(s), s.order.length, totalQueued(s)]).toEqual([6, 8, 2])
   })
 })
+
+describe('server errors and echoes (API Reference)', () => {
+  it('already_claimed → locked, like group.locked', () => {
+    expect(run(base(), { type: 'error', code: 'already_claimed', message: 'x' }).phase).toBe('locked')
+  })
+
+  it('group_deleted → deleted, unknown_group → not-found', () => {
+    expect(run(base(), { type: 'error', code: 'group_deleted', message: 'x' }).phase).toBe('deleted')
+    expect(run(base(), { type: 'error', code: 'unknown_group', message: 'x' }).phase).toBe('not-found')
+  })
+
+  it('other codes become a notice the tester can dismiss, and keep the tiles', () => {
+    const s = run(base(), { type: 'error', code: 'tile_offline', message: 'Tile is offline' })
+    expect([s.phase, s.notice]).toEqual(['ready', { code: 'tile_offline', message: 'Tile is offline' }])
+    expect(s.order).toEqual([T1, T2])
+    expect(run(s, { type: 'local.notice', notice: null }).notice).toBeUndefined()
+  })
+
+  it('tile.presence echo sets what the server accepted', () => {
+    const s = run(base(), { type: 'local.presence', number: T1, online: false }, { type: 'tile.presence', number: T1, online: true })
+    expect(s.tiles[T1].online).toBe(true)
+  })
+
+  it('tile.autoreply echo leaves the session state alone', () => {
+    const s = base()
+    expect(run(s, { type: 'tile.autoreply', number: T1, mode: 'echo' })).toBe(s)
+  })
+})

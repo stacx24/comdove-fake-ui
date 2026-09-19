@@ -2,6 +2,7 @@
 // It hands the UI one snapshot per group; the UI's own local actions do the rest.
 //
 // For the launch page's other states, add ?mock=empty | error | slow to the URL.
+import { loadConfig, saveConfig } from '../autoreply/storage'
 import { businessNumbers, groups, tilesByGroup } from './mockData'
 import type { DataSource } from './types'
 
@@ -49,4 +50,9 @@ export const mockSource: DataSource = {
       close: () => clearTimeout(timer),
     }
   },
+
+  // No server: the browser runs auto-reply and keeps the settings in localStorage (Task 8).
+  autoReplyOnServer: false,
+  getAutoReply: (number) => Promise.resolve(loadConfig(number)),
+  saveAutoReply: (number, config) => Promise.resolve(saveConfig(number, config)),
 }

@@ -1,5 +1,5 @@
 // The one door the pages use for data. `mock` and `server` both implement it.
-import type { BusinessNumber, ClientEvent, Group, ServerEvent } from '../types'
+import type { AutoReplyConfig, BusinessNumber, ClientEvent, Group, ServerEvent } from '../types'
 
 // `mock` = static mock data, no server behind it.
 export type ConnectionState = 'mock' | 'connecting' | 'open' | 'reconnecting' | 'closed'
@@ -20,4 +20,11 @@ export interface DataSource {
   listGroups(): Promise<Group[]>
   listBusinessNumbers(): Promise<BusinessNumber[]>
   connectGroup(group: string, handlers: GroupHandlers): GroupConnection
+  /**
+   * True when the server itself answers for auto-reply tiles (API Reference). The browser
+   * must then never reply as well, or every message gets two replies.
+   */
+  autoReplyOnServer: boolean
+  getAutoReply(number: string): Promise<AutoReplyConfig>
+  saveAutoReply(number: string, config: AutoReplyConfig): Promise<void>
 }

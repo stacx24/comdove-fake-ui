@@ -94,14 +94,36 @@ export type ClientEvent =
   | { type: 'tile.presence'; number: string; online: boolean }
   | { type: 'chat.read'; number: string; peer: string }
 
+// Extra fields marked "API Reference" come from the server team's reference (2026-09-19);
+// they are optional until checked against the running server (client plan, mapping item 4).
 export type ServerEvent =
-  | { type: 'group.claimed'; group: string; tiles: TileState[] }
+  | {
+      type: 'group.claimed'
+      group: string
+      tiles: (TileState & { unread?: number })[]
+      business_numbers?: BusinessNumber[] // API Reference
+    }
   | { type: 'group.locked'; group: string; since: number }
-  | { type: 'message.new'; to: string; message: ChatMessage }
+  | { type: 'message.new'; to: string; number?: string; message: ChatMessage }
   | { type: 'queue.flush'; number: string; messages: ChatMessage[] }
-  | { type: 'message.status'; wamid: string; status: MessageStatus }
+  | { type: 'message.status'; wamid: string; number?: string; status: MessageStatus; at?: number }
+  // API Reference: the server echoes what it accepted, and reports problems as `error`.
+  | { type: 'tile.presence'; number: string; online: boolean }
+  | ({ type: 'tile.autoreply'; number: string } & ServerAutoReply)
+  | { type: 'error'; code: string; message: string }
 
-// ---- Auto-reply (PRD FR-10), kept in the browser per tile ----
+// Codes after which the session can't continue: don't reconnect into them.
+export const FATAL_ERROR_CODES = ['already_claimed', 'group_deleted', 'unknown_group'] as const
+
+// ---- Auto-reply (PRD FR-10) ----
+// Mock mode keeps it in the browser; in server mode the server runs it (API Reference).
+
+// The server's shape: GET/PUT /api/customers/{number}/auto-reply and the tile.autoreply event.
+export interface ServerAutoReply {
+  mode: AutoReplyMode
+  delay_ms?: number
+  rules?: { keyword: string; reply: string }[]
+}
 
 export type AutoReplyMode = 'manual' | 'echo' | 'keyword'
 

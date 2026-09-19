@@ -17,9 +17,17 @@ export interface UiTile {
   queued: ChatMessage[]
 }
 
+/** A server `error` the tester should see (API Reference, WebSocket error codes). */
+export interface ServerNotice {
+  code: string
+  message: string
+}
+
 export interface SessionState {
-  phase: 'connecting' | 'ready' | 'locked'
+  /** locked = claim refused; deleted = the group was removed; not-found = no such group. */
+  phase: 'connecting' | 'ready' | 'locked' | 'deleted' | 'not-found'
   lockedSince?: number
+  notice?: ServerNotice
   order: string[]
   tiles: Record<string, UiTile>
   connection: ConnectionState
@@ -40,6 +48,7 @@ export type Action =
   | { type: 'local.presence'; number: string; online: boolean }
   | { type: 'local.read'; number: string; peer: string }
   | { type: 'local.connection'; state: ConnectionState }
+  | { type: 'local.notice'; notice: ServerNotice | null }
 
 export const initialState: SessionState = {
   phase: 'connecting',
@@ -158,6 +167,27 @@ export function reducer(state: SessionState, action: Action): SessionState {
 
     case 'local.connection':
       return state.connection === action.state ? state : { ...state, connection: action.state }
+
+    // The server's echo of a presence change: what it actually accepted wins.
+    case 'tile.presence':
+      return withTile(state, action.number, (tile) =>
+        tile.online === action.online ? tile : { ...tile, online: action.online },
+      )
+
+    // Auto-reply settings live outside the reducer (useGroupSession).
+    case 'tile.autoreply':
+      return state
+
+    case 'error':
+      if (action.code === 'already_claimed') return { ...state, phase: 'locked' }
+      if (action.code === 'group_deleted') return { ...state, phase: 'deleted' }
+      if (action.code === 'unknown_group') return { ...state, phase: 'not-found' }
+      return { ...state, notice: { code: action.code, message: action.message } }
+
+    case 'local.notice':
+      if (action.notice) return { ...state, notice: action.notice }
+      if (!state.notice) return state
+      return { ...state, notice: undefined }
   }
 }
 
