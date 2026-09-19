@@ -54,11 +54,8 @@ Look: dark background, gold accent (#E4B063), fonts Instrument Sans and JetBrain
 ## 3. Sections in detail
 
 ### 3.0 Top bar
-- Logo, `comdove-mock`, server address `localhost:4020`, and the **Client / Admin** buttons.
-- Right side: "● webhook → localhost:3000/webhooks/whatsapp", as in the design.
-- The server keeps the webhook address in its `.env` (`COMDOVE_WEBHOOK_URL`, Tech Spec §8), and **no server call returns it or the handshake result** yet (Tech Spec §5).
-- **Now:** show the address from sample data (or our `.env`, `VITE_WEBHOOK_URL`) with a **grey** dot meaning "not checked".
-- **After the server is set up:** read it from the server (see §10) and turn the dot green or red based on the handshake result.
+- **Changed at the client/admin merge (2026-09-19):** the whole app uses the client's top bar (`components/Shell.tsx`, client plan Task 1). Admin's own top bar and its grey "not checked" dot were dropped.
+- Shell shows the webhook address only when `VITE_WEBHOOK_URL` is set, with a green dot. Nothing checks the webhook yet, so the green dot is a label, not a status. The real status waits for the server (§10, item 3).
 
 ### 3.1 Register business number
 - Inputs: **display number** (digits only, 8–15 long) and **label** (e.g. "Sales").
@@ -104,7 +101,7 @@ Look: dark background, gold accent (#E4B063), fonts Instrument Sans and JetBrain
 
 - All server calls live in **one file**: `client/src/api.ts`.
 - Two modes, chosen in `.env` with `VITE_DATA_SOURCE`:
-  - `sample` (default for now): returns the design's sample data. Register, Create group and Reset work in the browser's memory until the page is refreshed.
+  - anything other than `server` (the shared `.env.example` uses `mock`, the client's word): returns the design's sample data. Register, Create group and Reset work in the browser's memory until the page is refreshed.
   - `server`: calls the real mock server through the Vite proxy (`/api` → `localhost:4020`).
 - When the server is ready, only this file and the `.env` value change. The admin page stays as it is.
 
@@ -161,7 +158,7 @@ Look: dark background, gold accent (#E4B063), fonts Instrument Sans and JetBrain
 - [ ] Reset clears the log; with "keep" ticked, numbers and groups stay
 - [ ] Every button and input has a `data-testid`
 - [ ] Switching `VITE_DATA_SOURCE=server` needs no change to the admin page
-- [ ] Top bar shows the webhook address with a grey "not checked" dot
+- [x] ~~Top bar shows the webhook address with a grey "not checked" dot~~ (replaced by the client's Shell at the merge, see §3.0)
 - [ ] Every form shows the server's error message in red; 11th business number is allowed
 - [ ] Reset calls `/api/reset`
 
@@ -187,3 +184,19 @@ Look: dark background, gold accent (#E4B063), fonts Instrument Sans and JetBrain
 | 6 | **Test helper calls in admin** (inject message, set presence) | Spec lists them for automation; PRD doesn't need them in the UI | Tech Spec §6 |
 | 7 | **Agree the exact shapes** of the log row webhook result and the group "claim" info, and write them in the README | The Spec doesn't define them | Tech Spec §6 |
 | 8 | **Share the README contract** with the server repo | PRD expects one repo with both apps; ours is UI only | PRD §3, §10 |
+| 9 | **Admin and Client share fake data.** In mock mode they use separate fake data (`mock/sampleData.ts` vs the client's `data/mockData.ts`), so a group created in Admin doesn't show on Client. The real server fixes this, because both pages read the same data. | Nothing to build; test it after the switch | — |
+| 10 | **Built UI reaching the server.** Only the dev server forwards `/api` and `/ws` | Needs a hosting decision | [server-team-questions.md](server-team-questions.md) Q2 |
+
+All open questions for the server team are collected in **[server-team-questions.md](server-team-questions.md)** (Q1–Q8).
+
+### Files to change when the server is ready
+| File | Change | When |
+|---|---|---|
+| `client/.env` | `VITE_DATA_SOURCE=server`, `MOCK_SERVER_URL`, `VITE_WEBHOOK_URL` — flips Admin and Client together | Always |
+| `client/.env.example` | Default to `server` | Always |
+| `src/types.ts` (+ `mock/sampleData.ts`, `data/mockData.ts`) | Match the server's real field names | Only if they differ (Q3) |
+| `src/api.ts` | New calls: config, delete, per-status log | Items 1, 3, 4 |
+| `src/components/admin/MessageLog.tsx` | Live feed, attempts per status | Items 1, 2 |
+| `src/components/admin/NumbersTable.tsx`, forms | Delete buttons | Item 4 |
+| `src/components/Shell.tsx` | Real webhook status (client-owned file; agree with the client dev) | Item 3 |
+| `README.md` | The agreed shapes | Always |

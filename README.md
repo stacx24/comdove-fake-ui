@@ -40,7 +40,9 @@ client/src/
   validation.ts          number / group-name checks
 ```
 
-Plans: [`docs/admin-ui-plan.md`](docs/admin-ui-plan.md)
+Plans: [`docs/admin-ui-plan.md`](docs/admin-ui-plan.md), [`docs/superpowers/plans/2026-09-19-client-ui.md`](docs/superpowers/plans/2026-09-19-client-ui.md)
+
+Open questions for the server team: [`docs/server-team-questions.md`](docs/server-team-questions.md)
 
 ## Branches
 - `main` — base setup
