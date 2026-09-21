@@ -1,5 +1,5 @@
-// One customer number. Bubble sides follow the Comdove Mock UI design: the customer's own messages
-// on the left, Comdove's messages on the right with ticks. Header with online toggle, badges and gear.
+// One customer number. WhatsApp-style (PRD §7): the customer's own messages on the right (outgoing),
+// Comdove's messages on the left (incoming) with ticks. Header with online toggle, badges and gear.
 import { useCallback, useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { businessLabel, hhmm, plus } from '../lib/format'
 import { lastSender, peers, unread, unreadMessages, type UiMessage, type UiTile } from '../session/reducer'
@@ -175,7 +175,7 @@ interface BubbleProps {
 function Bubble({ m, own, sender, onRetry }: BubbleProps) {
   const failed = m.pending === 'failed'
   return (
-    <div className={`${styles.row} ${own ? styles.rowLeft : styles.rowRight}`}>
+    <div className={`${styles.row} ${own ? styles.rowRight : styles.rowLeft}`}>
       <div
         className={`${styles.bubble} ${own ? styles.customer : styles.comdove} ${failed ? styles.failed : ''}`}
         data-testid={`msg-${m.wamid}`}
