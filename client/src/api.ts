@@ -60,8 +60,20 @@ async function sample<T>(call: () => Promise<T>): Promise<T> {
 
 const serverApi = {
   listBusinessNumbers: () => request<BusinessNumber[]>('GET', '/api/business-numbers'),
-  registerBusinessNumber: (display_number: string, label: string) =>
-    request<{ phone_number_id: string; token: string }>('POST', '/api/business-numbers', { display_number, label }),
+  // overrides let the caller pin phone_number_id / waba_id / token so the mock matches a number
+  // already registered in ComDove (ComDove-first order). Left blank, the server generates them.
+  registerBusinessNumber: (
+    display_number: string,
+    label: string,
+    overrides?: { phone_number_id?: string; waba_id?: string; token?: string },
+  ) =>
+    request<{ phone_number_id: string; token: string }>('POST', '/api/business-numbers', {
+      display_number,
+      label,
+      ...(overrides?.phone_number_id ? { phone_number_id: overrides.phone_number_id } : {}),
+      ...(overrides?.waba_id ? { waba_id: overrides.waba_id } : {}),
+      ...(overrides?.token ? { token: overrides.token } : {}),
+    }),
   listGroups: () => request<Group[]>('GET', '/api/groups'),
   listCustomers: () => request<Customer[]>('GET', '/api/customers'),
   createGroup: (name: string, numbers: string[]) =>
@@ -82,7 +94,7 @@ const serverApi = {
 
 const sampleApi: typeof serverApi = {
   listBusinessNumbers: () => sample(() => sampleServer.listBusinessNumbers()),
-  registerBusinessNumber: (display_number, label) => sample(() => sampleServer.registerBusinessNumber(display_number, label)),
+  registerBusinessNumber: (display_number, label, overrides) => sample(() => sampleServer.registerBusinessNumber(display_number, label, overrides)),
   listGroups: () => sample(() => sampleServer.listGroups()),
   listCustomers: () => sample(() => sampleServer.listCustomers()),
   createGroup: (name, numbers) => sample(() => sampleServer.createGroup(name, numbers)),

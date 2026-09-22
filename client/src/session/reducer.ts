@@ -77,6 +77,21 @@ function appendNew(history: UiMessage[], messages: ChatMessage[]): UiMessage[] {
   return fresh.length ? [...history, ...fresh] : history
 }
 
+// A real message.new that echoes a still-optimistic bubble this tab sent (same from/to/body)
+// adopts the server wamid in place — no duplicate. Otherwise append, deduped by wamid.
+function mergeIncoming(history: UiMessage[], incoming: ChatMessage): UiMessage[] {
+  const i = history.findIndex(
+    (m) => m.localId !== undefined && m.from === incoming.from && m.to === incoming.to && m.body === incoming.body,
+  )
+  if (i === -1) return appendNew(history, [incoming])
+  const merged: UiMessage = { ...history[i], wamid: incoming.wamid, status: raise(history[i].status, incoming.status) }
+  delete merged.localId
+  delete merged.pending
+  const next = [...history]
+  next[i] = merged
+  return next
+}
+
 export function reducer(state: SessionState, action: Action): SessionState {
   switch (action.type) {
     case 'group.claimed': {
@@ -90,9 +105,11 @@ export function reducer(state: SessionState, action: Action): SessionState {
       return { ...state, phase: 'locked', lockedSince: action.since }
 
     case 'message.new':
-      return withTile(state, action.to, (tile) => ({
+      // Route by the tile the server addressed (`number`), falling back to `to`. Inbound frames
+      // (tile reply, auto-reply) set to=<business>, so keying on `to` alone would drop them.
+      return withTile(state, action.number ?? action.to, (tile) => ({
         ...tile,
-        history: appendNew(tile.history, [action.message]),
+        history: mergeIncoming(tile.history, action.message),
       }))
 
     case 'queue.flush':
