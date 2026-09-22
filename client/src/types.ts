@@ -65,18 +65,25 @@ export interface WebhookDelivery {
 
 // GET /api/log?limit=100, newest first.
 export interface LogEntry {
-  wamid: string
+  wamid: string | null
   time: number
-  direction?: 'inbound' | 'outbound'
+  // 'rejected' = a Meta send the mock refused (bad token, forced error): no timeline/webhooks.
+  direction?: 'inbound' | 'outbound' | 'rejected'
   source?: string
-  from: string
-  to: string
+  from?: string
+  to?: string | null
   business?: { phone_number_id: string; label: string }
   group_id?: string | null
-  body: string
-  status: MessageStatus
-  timeline: TimelineEvent[]
-  webhooks: WebhookDelivery[]
+  body?: string | null
+  status?: MessageStatus
+  timeline?: TimelineEvent[]
+  webhooks?: WebhookDelivery[]
+  // Rejected-request fields (RejectedLogEntryDTO): the Meta error the mock returned.
+  phone_number_id?: string
+  http_status?: number
+  code?: number
+  subcode?: number | null
+  forced?: boolean
 }
 
 export interface TileState {

@@ -77,6 +77,23 @@ describe('server events', () => {
     expect(reducer(before, { type: 'message.new', to: 'nobody', message: msg('x', SALES, 'nobody') })).toBe(before)
   })
 
+  // Inbound frames (tile reply, auto-reply) carry number=<tile> but to=<business>. Route by
+  // `number` so the customer's own message (incl. server auto-reply) lands in its tile live.
+  it('message.new routes by number when `to` is the business (inbound / auto-reply)', () => {
+    const s = run(base(), { type: 'message.new', number: T1, to: SALES, message: msg('w2', T1, SALES) })
+    expect(s.tiles[T1].history.map((m) => m.wamid)).toEqual(['w1', 'w2'])
+  })
+
+  it('message.new reconciles a tile\'s own optimistic message instead of duplicating', () => {
+    const s = run(
+      base(),
+      { type: 'local.send', localId: 'L1', from: T1, to: SALES, body: 'hi there', timestamp: 100, sent: true },
+      { type: 'message.new', number: T1, to: SALES, message: { wamid: 'real-1', from: T1, to: SALES, body: 'hi there', status: 'sent', timestamp: 100 } },
+    )
+    expect(s.tiles[T1].history.map((m) => m.wamid)).toEqual(['w1', 'real-1']) // not local.L1 + real-1
+    expect(s.tiles[T1].history[1].localId).toBeUndefined()
+  })
+
   it('queue.flush appends in order, deduplicated, and clears the queue', () => {
     const s = run(base(), {
       type: 'queue.flush',

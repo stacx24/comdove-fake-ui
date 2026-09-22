@@ -23,10 +23,15 @@ const isFailing = (state: string) => state === 'retrying' || state === 'failed' 
 
 // Row summary, as in the guide: the latest webhook's last attempt.
 function webhookSummary(entry: LogEntry): { text: string; color: string } {
+  // A rejected Meta send (bad token / forced error) has no webhooks — show the Meta error code.
+  if (entry.direction === 'rejected') {
+    const code = entry.code ?? entry.http_status
+    return { text: code != null ? `error ${code}` : 'rejected', color: 'var(--red)' }
+  }
   // How the server marks a queued message is still to confirm (server-team-questions.md Q4).
   if (entry.status === 'queued') return { text: 'queued · tile offline', color: 'var(--dim)' }
 
-  const latest = entry.webhooks.at(-1)
+  const latest = (entry.webhooks ?? []).at(-1)
   const last = latest?.attempts.at(-1)
   if (!latest) return { text: '—', color: 'var(--dim)' }
   if (!last) return { text: latest.state, color: 'var(--dim)' }
@@ -121,57 +126,78 @@ export default function MessageLog({ refreshKey, onResetClick }: Props) {
         </div>
 
         {entries.map((entry) => {
-          const reached = new Map(entry.timeline.map((t) => [t.status, t.at]))
+          const rejected = entry.direction === 'rejected'
+          const timeline = entry.timeline ?? []
+          const webhooks = entry.webhooks ?? []
+          const rowId = entry.wamid ?? `rej-${entry.time}`
+          const reached = new Map(timeline.map((t) => [t.status, t.at]))
           const hook = webhookSummary(entry)
-          const isOpen = open === entry.wamid
+          const isOpen = open === rowId
           return (
-            <Fragment key={entry.wamid}>
+            <Fragment key={rowId}>
               <div
                 className={`row log-row log-row-button${isOpen ? ' open' : ''}`}
-                data-testid={`log-row-${entry.wamid}`}
+                data-testid={`log-row-${rowId}`}
                 role="button"
                 tabIndex={0}
                 aria-expanded={isOpen}
-                onClick={() => toggle(entry.wamid)}
+                onClick={() => toggle(rowId)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault()
-                    toggle(entry.wamid)
+                    toggle(rowId)
                   }
                 }}
               >
                 <div className="cell-mono" style={{ color: 'var(--muted)' }}>{formatTime(entry.time)}</div>
-                <div className="cell-mono">{entry.from}</div>
-                <div className="cell-mono">{entry.to}</div>
-                <div className="cell-ellipsis" style={{ color: 'var(--text-2)' }} title={entry.body}>{entry.body}</div>
+                <div className="cell-mono">{entry.from ?? entry.phone_number_id ?? '—'}</div>
+                <div className="cell-mono">{entry.to ?? '—'}</div>
+                <div className="cell-ellipsis" style={{ color: 'var(--text-2)' }} title={entry.body ?? ''}>{entry.body ?? '—'}</div>
                 <div className="chips">
-                  {STEPS.map((step) => (
-                    <span key={step} className={`chip ${step}${reached.has(step) ? ' on' : ''}`}>{step}</span>
-                  ))}
+                  {rejected ? (
+                    <span className="chip failed on" style={{ color: 'var(--red)' }}>rejected</span>
+                  ) : (
+                    STEPS.map((step) => (
+                      <span key={step} className={`chip ${step}${reached.has(step) ? ' on' : ''}`}>{step}</span>
+                    ))
+                  )}
                 </div>
                 <div className="cell-mono" style={{ color: hook.color }}>{hook.text}</div>
               </div>
 
               {isOpen && (
-                <div className="log-detail" data-testid={`log-detail-${entry.wamid}`}>
-                  <div className="log-detail-line">
-                    <span className="log-detail-kind">timeline</span>
-                    {entry.timeline.length === 0 && <span>—</span>}
-                    {entry.timeline.map((t) => (
-                      <span key={t.status}>
-                        {t.status} {formatTime(t.at)}
-                      </span>
-                    ))}
-                  </div>
-                  {entry.webhooks.length === 0 && (
+                <div className="log-detail" data-testid={`log-detail-${rowId}`}>
+                  {rejected ? (
                     <div className="log-detail-line">
-                      <span className="log-detail-kind">webhooks</span>
-                      <span>none yet</span>
+                      <span className="log-detail-kind">rejected</span>
+                      <span style={{ color: 'var(--red)' }}>
+                        Meta error {entry.code ?? '—'}
+                        {entry.subcode != null ? ` / ${entry.subcode}` : ''} · HTTP {entry.http_status ?? '—'}
+                        {entry.forced ? ' · forced' : ''}
+                      </span>
                     </div>
+                  ) : (
+                    <>
+                      <div className="log-detail-line">
+                        <span className="log-detail-kind">timeline</span>
+                        {timeline.length === 0 && <span>—</span>}
+                        {timeline.map((t) => (
+                          <span key={t.status}>
+                            {t.status} {formatTime(t.at)}
+                          </span>
+                        ))}
+                      </div>
+                      {webhooks.length === 0 && (
+                        <div className="log-detail-line">
+                          <span className="log-detail-kind">webhooks</span>
+                          <span>none yet</span>
+                        </div>
+                      )}
+                      {webhooks.map((w, i) => (
+                        <WebhookLine key={`${w.kind}-${i}`} webhook={w} />
+                      ))}
+                    </>
                   )}
-                  {entry.webhooks.map((w, i) => (
-                    <WebhookLine key={`${w.kind}-${i}`} webhook={w} />
-                  ))}
                 </div>
               )}
             </Fragment>
