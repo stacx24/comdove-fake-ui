@@ -37,7 +37,11 @@ function randomHex(length: number) {
 export const sampleServer = {
   listBusinessNumbers: () => later(businessNumbers),
 
-  registerBusinessNumber(display_number: string, label: string) {
+  registerBusinessNumber(
+    display_number: string,
+    label: string,
+    overrides?: { phone_number_id?: string; waba_id?: string; token?: string },
+  ) {
     const error = checkPhone(display_number)
     if (error) fail(error)
     if (isKnownNumber(display_number)) fail(`${display_number} is already registered.`, 409)
@@ -46,8 +50,8 @@ export const sampleServer = {
     const created: BusinessNumber = {
       display_number,
       label,
-      phone_number_id: `MOCK-PN-${next}`,
-      token: `mock_tok_${randomHex(12)}`,
+      phone_number_id: overrides?.phone_number_id?.trim() || `MOCK-PN-${next}`,
+      token: overrides?.token?.trim() || `mock_tok_${randomHex(12)}`,
     }
     businessNumbers = [...businessNumbers, created]
     return later({ phone_number_id: created.phone_number_id, token: created.token })

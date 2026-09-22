@@ -11,6 +11,9 @@ interface Props {
 export default function RegisterNumberForm({ isKnownNumber, onRegistered }: Props) {
   const [number, setNumber] = useState('')
   const [label, setLabel] = useState('')
+  const [phoneNumberId, setPhoneNumberId] = useState('')
+  const [wabaId, setWabaId] = useState('')
+  const [token, setToken] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [created, setCreated] = useState<{ number: string; phone_number_id: string; token: string } | null>(null)
@@ -28,10 +31,17 @@ export default function RegisterNumberForm({ isKnownNumber, onRegistered }: Prop
     setBusy(true)
     setError(null)
     try {
-      const result = await api.registerBusinessNumber(display_number, label.trim())
+      const result = await api.registerBusinessNumber(display_number, label.trim(), {
+        phone_number_id: phoneNumberId.trim() || undefined,
+        waba_id: wabaId.trim() || undefined,
+        token: token.trim() || undefined,
+      })
       setCreated({ number: display_number, ...result })
       setNumber('')
       setLabel('')
+      setPhoneNumberId('')
+      setWabaId('')
+      setToken('')
       onRegistered()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong.')
@@ -66,6 +76,46 @@ export default function RegisterNumberForm({ isKnownNumber, onRegistered }: Prop
           placeholder="Support line"
           value={label}
           onChange={(e) => setLabel(e.target.value)}
+        />
+      </div>
+
+      <div className="hint" style={{ marginTop: 4 }}>
+        Optional — fill these to match a number already registered in ComDove. Leave blank to auto-generate.
+      </div>
+
+      <div className="field">
+        <label htmlFor="reg-pnid">phone_number_id</label>
+        <input
+          id="reg-pnid"
+          data-testid="reg-pnid"
+          className="input mono"
+          placeholder="PHONE_DEMO_WS205"
+          value={phoneNumberId}
+          onChange={(e) => setPhoneNumberId(e.target.value)}
+        />
+      </div>
+
+      <div className="field">
+        <label htmlFor="reg-waba">waba_id</label>
+        <input
+          id="reg-waba"
+          data-testid="reg-waba"
+          className="input mono"
+          placeholder="WABA_DEMO_WS205"
+          value={wabaId}
+          onChange={(e) => setWabaId(e.target.value)}
+        />
+      </div>
+
+      <div className="field">
+        <label htmlFor="reg-token">token</label>
+        <input
+          id="reg-token"
+          data-testid="reg-token"
+          className="input mono"
+          placeholder="demo-token"
+          value={token}
+          onChange={(e) => setToken(e.target.value)}
         />
       </div>
 
