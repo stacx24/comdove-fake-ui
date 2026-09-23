@@ -1,6 +1,6 @@
 // One customer number. WhatsApp-style (PRD §7): the customer's own messages on the right (outgoing),
 // Comdove's messages on the left (incoming) with ticks. Header with online toggle, badges and gear.
-import { useCallback, useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { memo, useCallback, useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { businessLabel, hhmm, plus } from '../lib/format'
 import { lastSender, peers, unread, unreadMessages, type UiMessage, type UiTile } from '../session/reducer'
 import type { TileActions } from '../session/useGroupSession'
@@ -20,7 +20,7 @@ export interface TileProps {
 // Only auto-scroll when the tester is already reading the latest messages.
 const NEAR_BOTTOM_PX = 40
 
-export default function Tile({ tile, businessNumbers, actions, autoReply, paused }: TileProps) {
+function Tile({ tile, businessNumbers, actions, autoReply, paused }: TileProps) {
   const n = tile.number
   const tilePeers = peers(tile)
   const unreadCount = unread(tile)
@@ -163,6 +163,10 @@ export default function Tile({ tile, businessNumbers, actions, autoReply, paused
     </section>
   )
 }
+
+// A group holds up to 100 tiles (WS-343) and one status frame changes one tile, so the
+// other 99 must not re-render: every prop above is stable between that tile's own updates.
+export default memo(Tile)
 
 interface BubbleProps {
   m: UiMessage

@@ -1,4 +1,4 @@
-// Live message log (plan §3.4, §11.1, PRD FR-11). GET /api/log?limit=100, refreshed every 3 s
+// Live message log (plan §3.4, §11.1, PRD FR-11). GET /api/log?limit=<LOG_LIMIT>, refreshed every 3 s
 // until the server's WebSocket admin feed is wired up (plan §10).
 // Shape: UI-API-GUIDE.md §2e — times in milliseconds, one webhook per status with every attempt.
 import { Fragment, useEffect, useState } from 'react'
@@ -6,6 +6,9 @@ import { api } from '../../api'
 import type { LogEntry, MessageStatus, WebhookAttempt, WebhookDelivery } from '../../types'
 
 const REFRESH_MS = 3000
+// 5 businesses x 100 tiles is a 500-message run (WS-343); 100 rows would be a few seconds
+// of history. The server clamps this at 1000.
+const LOG_LIMIT = 500
 const STEPS: MessageStatus[] = ['sent', 'delivered', 'read']
 const MAX_RETRIES = 3 // Tech Spec §5: up to 3 retries after the first try
 
@@ -80,7 +83,7 @@ export default function MessageLog({ refreshKey, onResetClick }: Props) {
 
     async function load() {
       try {
-        const log = await api.log(100)
+        const log = await api.log(LOG_LIMIT)
         if (cancelled) return
         setEntries([...log].sort((a, b) => b.time - a.time))
         setError(null)
@@ -109,7 +112,7 @@ export default function MessageLog({ refreshKey, onResetClick }: Props) {
           <span className="dot dot-sm" style={{ background: error ? 'var(--red)' : 'var(--green)' }} />
           <span>{error ? 'not connected' : `streaming · newest first · every ${REFRESH_MS / 1000}s`}</span>
         </div>
-        <div className="hint" style={{ marginLeft: 'auto', fontSize: 11 }}>GET /api/log?limit=100 · click a row for webhook attempts</div>
+        <div className="hint" style={{ marginLeft: 'auto', fontSize: 11 }}>GET /api/log?limit={LOG_LIMIT} · click a row for webhook attempts</div>
         <button type="button" className="btn btn-danger-outline" data-testid="reset" onClick={onResetClick}>
           Reset
         </button>
