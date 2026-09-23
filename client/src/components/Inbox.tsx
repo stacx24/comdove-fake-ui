@@ -1,20 +1,18 @@
-// WhatsApp-style view of a group: the customer numbers on the left, the chosen number's
-// conversation on the right. With 100 tiles (WS-343) the grid cannot show who wrote to whom,
-// so every incoming bubble here names the business number it came from.
+// The client tab, laid out like WhatsApp Web: a narrow sidebar on the left, the open
+// conversation filling the rest.
 //
-// Two extra pieces on top of that (by request):
-//  - a switcher strip across the top lists every group, so clicking one jumps the WHOLE
-//    inbox to that business's own customers, without going back to the Groups screen.
-//  - clicking a customer's avatar (in the list, or in the open chat) opens a contact-info
-//    panel: the full number, online state, which businesses it has messaged, and counts.
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
+//   sidebar  = the group's customer numbers → pick one → that phone's own chats
+//   pane     = a splash until a chat is open, then the conversation
+//
+// It is the CUSTOMER's point of view: which phone am I, and what does it see?
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { data } from '../data'
+import { GROUP_CHAT } from '../lib/chats'
 import { businessLabel, hhmm, plus } from '../lib/format'
-import { lastSender, peers, unread, unreadMessages, type UiTile } from '../session/reducer'
+import { peers, unread, unreadMessages, type UiTile } from '../session/reducer'
 import type { TileActions } from '../session/useGroupSession'
 import type { AutoReplyConfig, BusinessNumber, Group } from '../types'
-import AutoReplyPopover from './AutoReplyPopover'
-import Bubble from './Bubble'
+import { PhoneChat, PhoneChatList } from './PhoneView'
 import styles from './Inbox.module.css'
 
 export interface InboxProps {
@@ -27,7 +25,6 @@ export interface InboxProps {
   onSwitchGroup(groupId: string): void
 }
 
-const NEAR_BOTTOM_PX = 40
 const GROUPS_REFRESH_MS = 5000
 const lastMessage = (tile: UiTile) => tile.history[tile.history.length - 1]
 
@@ -40,11 +37,14 @@ export default function Inbox({
   currentGroup,
   onSwitchGroup,
 }: InboxProps) {
-  const [selected, setSelected] = useState<string | null>(null)
+  /** The phone whose chats are open; null = the number list. */
+  const [phone, setPhone] = useState<string | null>(null)
+  /** Which of that phone's chats is open: the group, or a business number. */
+  const [openChat, setOpenChat] = useState<string>(GROUP_CHAT)
   const [search, setSearch] = useState('')
   const [infoFor, setInfoFor] = useState<string | null>(null)
 
-  // Busiest chats first, like a real inbox; numbers with no messages keep their tile order.
+  // Busiest first, like a real inbox; numbers with no messages keep their tile order.
   const ordered = useMemo(() => {
     const withTime = tiles.map((t, i) => ({ t, i, at: lastMessage(t)?.timestamp ?? 0 }))
     withTime.sort((a, b) => (b.at !== a.at ? b.at - a.at : a.i - b.i))
@@ -53,68 +53,128 @@ export default function Inbox({
 
   const filtered = useMemo(() => {
     const q = search.trim()
-    if (!q) return ordered
-    return ordered.filter((t) => t.number.includes(q))
+    return q ? ordered.filter((t) => t.number.includes(q)) : ordered
   }, [ordered, search])
 
-  // Keep a selection even as the list reorders or the group reloads.
-  const current = (selected && tiles.find((t) => t.number === selected)) || filtered[0] || null
+  const openTile = phone ? tiles.find((t) => t.number === phone) ?? null : null
   const infoTile = infoFor ? tiles.find((t) => t.number === infoFor) ?? null : null
 
-  const openChat = (number: string) => {
-    setSelected(number)
+  /** Opening a phone lands on its most recent business chat, else the group. */
+  const pickPhone = (number: string) => {
     const tile = tiles.find((t) => t.number === number)
-    if (tile) markRead(tile, actions)
+    const first = tile ? peers(tile)[0] : undefined
+    setPhone(number)
+    setOpenChat(first ?? GROUP_CHAT)
+    if (tile && first) actions.markRead(number, first)
   }
 
-  const openInfo = (number: string) => {
-    openChat(number)
-    setInfoFor(number)
-  }
+  // ---- Keyboard: ↑/↓ through the numbers, Enter to open, Esc to go back ----
+  const [cursorAt, setCursor] = useState(0)
+  const rowsRef = useRef<HTMLDivElement>(null)
+  // Clamped as it is read, so a shrinking list (search, reordering) can't strand it.
+  const cursor = Math.min(cursorAt, Math.max(filtered.length - 1, 0))
+
+  useEffect(() => {
+    const onKey = (e: globalThis.KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        // The contact-info panel closes itself first.
+        if (infoFor) return
+        if (phone) setPhone(null)
+        else if (search) setSearch('')
+        return
+      }
+      // Only the number list is navigable; inside a phone the keys belong to the composer.
+      if (phone || filtered.length === 0) return
+
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault()
+        const next = e.key === 'ArrowDown' ? cursor + 1 : cursor - 1
+        const clamped = Math.max(0, Math.min(next, filtered.length - 1))
+        rowsRef.current?.children[clamped]?.scrollIntoView({ block: 'nearest' })
+        setCursor(clamped)
+      } else if (e.key === 'Enter') {
+        const tile = filtered[cursor]
+        if (tile) {
+          e.preventDefault()
+          pickPhone(tile.number)
+        }
+      }
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  })
 
   return (
     <div className={styles.inbox} data-testid="inbox">
       <GroupSwitcher current={currentGroup} onSwitch={onSwitchGroup} />
 
       <div className={styles.body}>
-        <aside className={styles.list}>
-          <div className={styles.search}>
-            <input
-              className={styles.searchInput}
-              data-testid="inbox-search"
-              placeholder={`Search ${tiles.length} numbers…`}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+        <aside className={styles.sidebar}>
+          {openTile ? (
+            <PhoneChatList
+              key={openTile.number}
+              tile={openTile}
+              tiles={tiles}
+              groupName={currentGroup}
+              businessNumbers={businessNumbers}
+              openChat={openChat}
+              actions={actions}
+              autoReply={autoReply[openTile.number]}
+              onOpenChat={setOpenChat}
+              onBack={() => setPhone(null)}
+              onAvatarClick={() => setInfoFor(openTile.number)}
             />
-          </div>
-          <div className={styles.rows}>
-            {filtered.length === 0 && <div className={styles.emptyList}>No number matches “{search}”.</div>}
-            {filtered.map((tile) => (
-              <ChatRow
-                key={tile.number}
-                tile={tile}
-                businessNumbers={businessNumbers}
-                active={current?.number === tile.number}
-                onOpen={() => openChat(tile.number)}
-                onAvatarClick={() => openInfo(tile.number)}
-              />
-            ))}
-          </div>
+          ) : (
+            <>
+              <div className={styles.search}>
+                <input
+                  className={styles.searchInput}
+                  data-testid="inbox-search"
+                  placeholder={`Search ${tiles.length} numbers…`}
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
+              <div className={styles.rows} ref={rowsRef}>
+                {filtered.length === 0 && <div className={styles.emptyList}>No number matches “{search}”.</div>}
+                {filtered.map((tile, i) => (
+                  <NumberRow
+                    key={tile.number}
+                    tile={tile}
+                    businessNumbers={businessNumbers}
+                    cursor={i === cursor}
+                    onOpen={() => pickPhone(tile.number)}
+                    onAvatarClick={() => setInfoFor(tile.number)}
+                  />
+                ))}
+              </div>
+              <div className={styles.keyHint}>↑ ↓ to move · Enter to open · Esc to go back</div>
+            </>
+          )}
         </aside>
 
-        {current ? (
-          <Conversation
-            key={current.number}
-            tile={current}
-            businessNumbers={businessNumbers}
-            actions={actions}
-            autoReply={autoReply[current.number]}
-            paused={!!paused[current.number]}
-            onAvatarClick={() => setInfoFor(current.number)}
-          />
-        ) : (
-          <div className={styles.placeholder}>Pick a number to see its messages.</div>
-        )}
+        <main className={styles.pane}>
+          {openTile ? (
+            <PhoneChat
+              tile={openTile}
+              tiles={tiles}
+              groupName={currentGroup}
+              businessNumbers={businessNumbers}
+              openChat={openChat}
+              actions={actions}
+              paused={!!paused[openTile.number]}
+            />
+          ) : (
+            <div className={styles.splash} data-testid="inbox-splash">
+              <div className={styles.splashMark}>💬</div>
+              <div className={styles.splashTitle}>Pick a number</div>
+              <p className={styles.splashText}>
+                Choose one of this group&rsquo;s {tiles.length} numbers to open its chats — the group it belongs to,
+                and a chat with every business number.
+              </p>
+            </div>
+          )}
+        </main>
 
         {infoTile && (
           <ContactInfo tile={infoTile} businessNumbers={businessNumbers} onClose={() => setInfoFor(null)} />
@@ -124,19 +184,18 @@ export default function Inbox({
   )
 }
 
-function markRead(tile: UiTile, actions: TileActions): void {
-  const from = new Set(unreadMessages(tile).map((m) => m.from))
-  for (const peer of from) actions.markRead(tile.number, peer)
-}
-
-// Every group as a tab: clicking one is a full jump to that business's own customers
-// (react-router remounts the session, same as picking it from ← Groups).
+// Every group as a tab: clicking one jumps to that business's own customers (react-router
+// remounts the session, same as picking it from ← Groups).
 function GroupSwitcher({ current, onSwitch }: { current: string; onSwitch(groupId: string): void }) {
   const [groups, setGroups] = useState<Group[] | null>(null)
 
   useEffect(() => {
     let cancelled = false
-    const load = () => data.listGroups().then((list) => !cancelled && setGroups(list), () => {})
+    const load = () =>
+      data.listGroups().then(
+        (list) => !cancelled && setGroups(list),
+        () => {},
+      )
     load()
     const timer = setInterval(load, GROUPS_REFRESH_MS)
     return () => {
@@ -171,240 +230,83 @@ function GroupSwitcher({ current, onSwitch }: { current: string; onSwitch(groupI
   )
 }
 
-function ChatRow({
+/** One customer number in the picker: open it to see that phone's chats. */
+function NumberRow({
   tile,
   businessNumbers,
-  active,
+  cursor,
   onOpen,
   onAvatarClick,
 }: {
   tile: UiTile
   businessNumbers: BusinessNumber[]
-  active: boolean
+  /** Highlighted by the keyboard cursor. */
+  cursor: boolean
   onOpen(): void
   onAvatarClick(): void
 }) {
   const last = lastMessage(tile)
   const unreadCount = unread(tile)
-  // Who sent this row's last message: the admin/business side is the visible identity here.
-  // The client number is hidden until the profile icon is clicked (Contact info).
-  const admin = peers(tile)[0]
-  const heading = admin ? businessLabel(admin, businessNumbers) ?? plus(admin) : 'No business yet'
+  const from = last && last.from !== tile.number ? businessLabel(last.from, businessNumbers) ?? plus(last.from) : null
+
+  const avatarKey = (e: KeyboardEvent<HTMLSpanElement>) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      e.stopPropagation()
+      onAvatarClick()
+    }
+  }
 
   return (
     <button
       type="button"
-      className={`${styles.row} ${active ? styles.rowActive : ''}`}
+      className={`${styles.row} ${cursor ? styles.rowCursor : ''}`}
       data-testid={`inbox-row-${tile.number}`}
       onClick={onOpen}
     >
-      <Avatar
-        number={tile.number}
-        online={tile.online}
-        testId={`inbox-avatar-${tile.number}`}
-        onClick={onAvatarClick}
-      />
+      <span
+        className={`${styles.avatar} ${tile.online ? styles.avatarOnline : ''}`}
+        data-testid={`inbox-avatar-${tile.number}`}
+        role="button"
+        tabIndex={0}
+        title="Contact info"
+        onClick={(e) => {
+          e.stopPropagation()
+          onAvatarClick()
+        }}
+        onKeyDown={avatarKey}
+      >
+        {tile.number.slice(-2)}
+      </span>
       <span className={styles.rowBody}>
         <span className={styles.rowTop}>
-          <span className={styles.rowNumber}>{heading}</span>
+          <span className={`${styles.rowNumber} mono`}>{plus(tile.number)}</span>
           {last && <span className={`${styles.rowTime} mono`}>{hhmm(last.timestamp)}</span>}
         </span>
         <span className={styles.rowBottom}>
           <span className={styles.preview}>
-            {last ? last.body : <span className={styles.previewEmpty}>No messages yet</span>}
+            {last ? (
+              <>
+                {from && <span className={styles.previewFrom}>{from}: </span>}
+                {last.body}
+              </>
+            ) : (
+              <span className={styles.previewEmpty}>No messages yet</span>
+            )}
           </span>
           {unreadCount > 0 && (
             <span className={`${styles.badge} mono`} data-testid={`inbox-unread-${tile.number}`}>
               {unreadCount}
             </span>
           )}
-          {tile.queued.length > 0 && <span className={styles.queued}>{tile.queued.length} queued</span>}
+          {tile.queued.length > 0 && <span className={styles.queued}>{tile.queued.length}</span>}
         </span>
       </span>
     </button>
   )
 }
 
-// A clickable avatar that never triggers the row/header it sits in (stopPropagation), so
-// it can open contact info while the rest of the row still opens the chat as before.
-function Avatar({
-  number,
-  online,
-  testId,
-  onClick,
-}: {
-  number: string
-  online: boolean
-  testId: string
-  onClick(): void
-}) {
-  const fire = (e: { stopPropagation(): void }) => {
-    e.stopPropagation()
-    onClick()
-  }
-  const onKey = (e: KeyboardEvent<HTMLSpanElement>) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault()
-      fire(e)
-    }
-  }
-  return (
-    <span
-      className={`${styles.avatar} ${online ? styles.avatarOnline : ''}`}
-      data-testid={testId}
-      role="button"
-      tabIndex={0}
-      title="Contact info"
-      onClick={fire}
-      onKeyDown={onKey}
-    >
-      {number.slice(-2)}
-    </span>
-  )
-}
-
-function Conversation({
-  tile,
-  businessNumbers,
-  actions,
-  autoReply,
-  paused,
-  onAvatarClick,
-}: {
-  tile: UiTile
-  businessNumbers: BusinessNumber[]
-  actions: TileActions
-  autoReply: AutoReplyConfig
-  paused: boolean
-  onAvatarClick(): void
-}) {
-  const n = tile.number
-  const tilePeers = peers(tile)
-  const target = lastSender(tile) ?? tilePeers[0] ?? businessNumbers[0]?.display_number
-  const label = (number: string) => businessLabel(number, businessNumbers) ?? plus(number)
-
-  // The admin/business side is the visible identity in the heading; the client number stays
-  // hidden until the profile icon is clicked (Contact info shows it in full).
-  const lastAdmin = tilePeers[0]
-  const heading = lastAdmin ? label(lastAdmin) : 'No business yet'
-  const otherPeers = tilePeers.filter((p) => p !== lastAdmin)
-
-  const [draft, setDraft] = useState('')
-  const [settingsOpen, setSettingsOpen] = useState(false)
-  const gearRef = useRef<HTMLButtonElement>(null)
-
-  const send = () => {
-    const body = draft.trim()
-    if (!body || !tile.online || !target) return
-    actions.send(n, target, body)
-    setDraft('')
-  }
-  const onKey = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') send()
-  }
-
-  // Opening a chat marks it read (FR-06), and new messages keep it read while it is open.
-  useEffect(() => {
-    if (unread(tile) > 0) markRead(tile, actions)
-  }, [tile, actions])
-
-  const chatRef = useRef<HTMLDivElement>(null)
-  const pinned = useRef(true)
-  useLayoutEffect(() => {
-    const el = chatRef.current
-    if (el && pinned.current) el.scrollTop = el.scrollHeight
-  }, [tile.history.length])
-  const onScroll = () => {
-    const el = chatRef.current
-    if (el) pinned.current = el.scrollHeight - el.scrollTop - el.clientHeight < NEAR_BOTTOM_PX
-  }
-
-  return (
-    <section className={styles.chatPane} data-testid={`inbox-chat-${n}`}>
-      <header className={styles.chatHeader}>
-        <Avatar number={n} online={tile.online} testId={`inbox-chat-avatar-${n}`} onClick={onAvatarClick} />
-        <div className={styles.chatWho}>
-          <div className={styles.chatNumber}>{heading}</div>
-          <div className={styles.chatSub}>
-            {tile.history.length === 0
-              ? 'no messages yet — click the profile icon for the customer number'
-              : otherPeers.length > 0
-                ? `also talked to ${otherPeers.map(label).join(', ')}`
-                : 'click the profile icon for the customer number'}
-          </div>
-        </div>
-        <button
-          type="button"
-          className={styles.presence}
-          data-testid={`inbox-presence-${n}`}
-          title={tile.online ? 'Online — click to go offline' : 'Offline — click to go online'}
-          aria-pressed={tile.online}
-          onClick={() => actions.setPresence(n, !tile.online)}
-        >
-          <span className={`${styles.presenceDot} ${tile.online ? styles.presenceOn : ''}`} />
-          {tile.online ? 'online' : 'offline'}
-        </button>
-        <button
-          ref={gearRef}
-          type="button"
-          className={`${styles.gear} ${autoReply.mode !== 'manual' ? styles.gearAuto : ''}`}
-          data-testid={`inbox-autoreply-${n}`}
-          title="Auto-reply mode"
-          aria-expanded={settingsOpen}
-          onClick={() => setSettingsOpen((o) => !o)}
-        >
-          ⚙ {autoReply.mode}
-        </button>
-        {settingsOpen && (
-          <AutoReplyPopover
-            number={n}
-            config={autoReply}
-            onChange={(c) => actions.setAutoReply(n, c)}
-            onClose={() => setSettingsOpen(false)}
-            anchor={gearRef}
-          />
-        )}
-      </header>
-
-      <div ref={chatRef} className={styles.messages} data-testid={`inbox-messages-${n}`} onScroll={onScroll}>
-        {tile.history.length === 0 ? (
-          <div className={styles.emptyChat}>No messages yet</div>
-        ) : (
-          tile.history.map((m) => (
-            // Always name the business number here: that is what the grid could not show.
-            <Bubble key={m.wamid} m={m} own={m.from === n} sender={m.from === n ? null : label(m.from)} onRetry={actions.retry} />
-          ))
-        )}
-      </div>
-
-      {paused && <div className={styles.paused}>Auto-reply paused (loop guard)</div>}
-
-      <div className={styles.composer}>
-        <input
-          className={styles.input}
-          data-testid={`inbox-input-${n}`}
-          placeholder={tile.online ? 'Message as customer…' : 'Offline — turn the number online to reply'}
-          value={draft}
-          disabled={!tile.online}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={onKey}
-        />
-        <button
-          type="button"
-          className={styles.send}
-          data-testid={`inbox-send-${n}`}
-          disabled={!tile.online || !target}
-          onClick={send}
-        >
-          Send{target ? ` → ${label(target)}` : ''}
-        </button>
-      </div>
-    </section>
-  )
-}
-
-// Slides over the right side of the chat pane, like tapping a contact's name/photo in
-// WhatsApp — the full number, online state, every business it has talked to, and counts.
+// Slides in from the right, like tapping a contact's photo in WhatsApp.
 function ContactInfo({
   tile,
   businessNumbers,
@@ -429,7 +331,13 @@ function ContactInfo({
     <aside className={styles.info} role="dialog" aria-label="Contact info" data-testid={`contact-info-${n}`}>
       <div className={styles.infoHeader}>
         <span className={styles.infoTitle}>Contact info</span>
-        <button type="button" className={styles.infoClose} data-testid="contact-info-close" aria-label="Close" onClick={onClose}>
+        <button
+          type="button"
+          className={styles.infoClose}
+          data-testid="contact-info-close"
+          aria-label="Close"
+          onClick={onClose}
+        >
           ✕
         </button>
       </div>

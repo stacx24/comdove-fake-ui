@@ -1,0 +1,373 @@
+/* One phone's WhatsApp. These pieces render into the client screen's two columns
+   (Inbox.module.css owns the frame): the sidebar's header + chat list, and the pane's
+   header, messages and composer. */
+
+/* ---- Sidebar: my phone + its chats ---- */
+.me {
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 10px 10px 8px;
+  border-bottom: 1px solid var(--divider);
+  background: var(--raised);
+}
+
+.back {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1;
+}
+.back:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+
+.meWho {
+  flex: 1;
+  min-width: 0;
+}
+
+.meTop {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.meNumber {
+  font-size: 12.5px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.youTag {
+  flex-shrink: 0;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--accent-tint);
+  border: 1px solid var(--accent-line);
+  color: var(--accent-text);
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.meSub {
+  font-size: 10.5px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.iconButton {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--faint);
+  font-size: 12px;
+  padding: 0;
+}
+.iconButton:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+.iconButtonActive {
+  color: var(--mode-auto);
+  border-color: var(--mode-auto);
+}
+
+.presenceDot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--offline);
+}
+.presenceOn {
+  background: var(--ok);
+  box-shadow: 0 0 0 3px rgba(37, 211, 102, 0.22);
+}
+
+.chatList {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.chatRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 12px;
+  border: 0;
+  border-bottom: 1px solid var(--divider);
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+.chatRow:hover {
+  background: var(--hover);
+}
+.chatRowActive {
+  background: var(--raised);
+}
+
+.chatBody {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.chatTop {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.chatName {
+  font-size: 12.5px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chatTime {
+  flex-shrink: 0;
+  font-size: 10px;
+  color: var(--faint);
+}
+
+.chatBottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.chatPreview {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.muted {
+  color: var(--faint);
+  font-style: italic;
+}
+
+.badge {
+  flex-shrink: 0;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--bg);
+  font-size: 10px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ---- Avatars ---- */
+.avatar {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--raised);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--muted);
+  position: relative;
+}
+.avatarOnline::after {
+  content: '';
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--ok);
+  border: 2px solid var(--raised);
+}
+.avatarGroup {
+  font-size: 15px;
+  font-family: var(--font-ui);
+}
+.avatarBusiness {
+  background: var(--accent-tint);
+  border-color: var(--accent-line);
+  color: var(--accent-text);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* ---- Pane: the open conversation ---- */
+.chatHeader {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--divider);
+  background: var(--surface);
+}
+
+.chatWho {
+  flex: 1;
+  min-width: 0;
+}
+
+.chatTitle {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.chatSub {
+  font-size: 10.5px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.messages {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.empty {
+  margin: auto;
+  color: var(--faint);
+  font-size: 12px;
+}
+
+/* ---- Dividers between days, and where the unread messages start ---- */
+.dayDivider {
+  display: flex;
+  justify-content: center;
+  margin: 8px 0 2px;
+}
+.dayDivider span {
+  padding: 4px 11px;
+  border-radius: 7px;
+  background: var(--surface);
+  box-shadow: 0 1px 1px rgba(11, 20, 26, 0.1);
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+}
+
+/* A full-width band across the conversation, as WhatsApp marks where you left off.
+   The negative margins bleed it past the message list's own padding. */
+.unreadDivider {
+  margin: 6px -16px 4px;
+  padding: 5px 16px;
+  background: var(--accent-tint);
+  border-top: 1px solid var(--accent-line);
+  border-bottom: 1px solid var(--accent-line);
+  text-align: center;
+}
+.unreadDivider span {
+  color: var(--accent-text);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.groupNote {
+  flex-shrink: 0;
+  padding: 8px 14px;
+  font-size: 11px;
+  color: var(--muted);
+  background: var(--surface);
+  border-top: 1px solid var(--divider);
+  text-align: center;
+}
+
+.composer {
+  flex-shrink: 0;
+  display: flex;
+  gap: 8px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--divider);
+  background: var(--surface);
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  height: 34px;
+  padding: 0 12px;
+  border-radius: var(--radius-control);
+  border: 1px solid var(--border);
+  background: var(--raised);
+  color: var(--text);
+  outline: none;
+  font-size: 12.5px;
+}
+.input:focus {
+  border-color: var(--accent);
+}
+.input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.send {
+  height: 34px;
+  padding: 0 16px;
+  border-radius: var(--radius-control);
+  border: 0;
+  background: var(--accent);
+  color: var(--bg);
+  font-weight: 600;
+  font-size: 12px;
+}
+.send:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+.send:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}

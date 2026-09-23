@@ -17,7 +17,7 @@
   gap: 20px;
   padding: 0 20px;
   border-bottom: 1px solid var(--border);
-  background: var(--surface);
+  background: var(--raised); /* WhatsApp's grey panel header */
 }
 
 .brand {
