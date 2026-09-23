@@ -1,32 +1,37 @@
-/* Design tokens from the Comdove Mock UI design. Dark only. */
+/* WhatsApp light theme: white panels, green accents, beige chat wallpaper.
+   Every page (client and admin) is built from these tokens. */
 :root {
-  --bg: #0e1116;
-  --surface: #12161b;
-  --raised: #171c22;
-  --border: rgba(255, 255, 255, 0.09);
-  --divider: rgba(255, 255, 255, 0.06);
-  --hover: rgba(255, 255, 255, 0.06);
+  --bg: #f0f2f5; /* app background behind the panels */
+  --surface: #ffffff; /* panels, cards, chat list */
+  --raised: #f0f2f5; /* panel headers, inputs */
+  --border: #e9edef;
+  --divider: #eef1f3;
+  --hover: rgba(11, 20, 26, 0.05);
 
-  --text: #e6eaef;
-  --text-2: #c6ced6;
-  --muted: #9ea9b4;
-  --faint: #78858f;
+  --text: #111b21;
+  --text-2: #3b4a54;
+  --muted: #667781;
+  --faint: #8696a0;
 
-  --accent: #e4b063;
-  --accent-hover: #ebc27e;
-  --accent-text: #f0d199;
-  --accent-tint: rgba(228, 176, 99, 0.12);
-  --accent-line: rgba(228, 176, 99, 0.5);
+  --accent: #00a884; /* WhatsApp green */
+  --accent-hover: #008069;
+  --accent-text: #027d6f;
+  --accent-tint: rgba(0, 168, 132, 0.12);
+  --accent-line: rgba(0, 168, 132, 0.45);
 
-  --ok: #4dbe93;
-  --read: #6c9bf5;
-  --offline: #3c4753;
-  --danger: #d9524a;
-  --mode-manual: #55626f;
-  --mode-auto: #8f86e8;
+  --ok: #25d366; /* online dot */
+  --read: #53bdeb; /* blue read ticks */
+  --offline: #c4ccd1;
+  --danger: #d9342b;
+  --mode-manual: #8696a0;
+  --mode-auto: #7b61ff;
 
-  --out-bg: #132e25;
-  --out-border: rgba(77, 190, 147, 0.25);
+  /* Chat bubbles, as WhatsApp has them: your own green on the right, theirs white. */
+  --chat-bg: #efeae2; /* conversation wallpaper */
+  --out-bg: #d9fdd3; /* own message */
+  --out-border: #cdeec4;
+  --in-bg: #ffffff; /* incoming message */
+  --in-border: #e9edef;
 
   --font-ui: 'Instrument Sans', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
@@ -77,7 +82,7 @@ select {
   height: 6px;
 }
 ::-webkit-scrollbar-thumb {
-  background: #2e3741;
+  background: #c4ccd1;
   border-radius: 3px;
 }
 
@@ -90,17 +95,18 @@ select {
    so admin's darker grey is --subtle. Admin base rules are scoped to .admin so they
    don't change the client pages. */
 :root {
-  --dim: #78858f;
-  --subtle: #55626f;
-  --off: #3c4753;
+  --dim: #667781;
+  --subtle: #8696a0;
+  --off: #c4ccd1;
 
-  --gold: #e4b063;
-  --gold-hover: #ebc27e;
-  --gold-light: #f0d199;
-  --green: #4dbe93;
-  --blue: #6c9bf5;
-  --orange: #e07a4e;
-  --red: #d9524a;
+  /* Admin's accent is the same WhatsApp green; the names stay so the rules below keep working. */
+  --gold: #00a884;
+  --gold-hover: #008069;
+  --gold-light: #027d6f;
+  --green: #1da851;
+  --blue: #53bdeb;
+  --orange: #d4761a;
+  --red: #d9342b;
 
   --radius: 10px;
   --radius-sm: 5px;
@@ -108,7 +114,7 @@ select {
 }
 
 .admin {
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 .admin button:disabled {
@@ -235,13 +241,13 @@ textarea.input {
 .btn-danger-outline {
   height: 28px;
   font-size: 12px;
-  border: 1px solid rgba(217, 82, 74, 0.5);
+  border: 1px solid rgba(217, 52, 43, 0.5);
   background: transparent;
   color: var(--red);
 }
 
 .btn-danger-outline:hover:not(:disabled) {
-  background: rgba(217, 82, 74, 0.12);
+  background: rgba(217, 52, 43, 0.08);
 }
 
 .btn-danger {
@@ -289,8 +295,8 @@ textarea.input {
   font-size: 12px;
   line-height: 1.5;
   color: var(--green);
-  border: 1px solid rgba(77, 190, 147, 0.3);
-  background: rgba(77, 190, 147, 0.08);
+  border: 1px solid rgba(29, 168, 81, 0.3);
+  background: rgba(29, 168, 81, 0.08);
   border-radius: var(--radius-sm);
   padding: 8px 10px;
   word-break: break-all;
@@ -407,8 +413,8 @@ textarea.input {
 }
 
 .chip.on {
-  border-color: rgba(255, 255, 255, 0.16);
-  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(11, 20, 26, 0.16);
+  background: rgba(11, 20, 26, 0.04);
   color: var(--text-2);
 }
 
@@ -454,7 +460,7 @@ textarea.input {
 
 .log-row-button:hover,
 .log-row-button.open {
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(11, 20, 26, 0.04);
 }
 
 .log-row-button:focus-visible {
@@ -465,7 +471,7 @@ textarea.input {
 .log-detail {
   min-width: 950px;
   padding: 8px 16px 12px 98px;
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(11, 20, 26, 0.03);
   border-top: 1px dashed var(--divider);
   display: flex;
   flex-direction: column;
@@ -494,7 +500,7 @@ textarea.input {
 .backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(6, 7, 9, 0.72);
+  background: rgba(11, 20, 26, 0.45);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -506,13 +512,13 @@ textarea.input {
   width: 380px;
   max-width: 100%;
   border-radius: 12px;
-  background: var(--raised);
+  background: var(--surface);
   border: 1px solid var(--border);
   padding: 20px;
   display: flex;
   flex-direction: column;
   gap: 14px;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 24px 60px rgba(11, 20, 26, 0.25);
 }
 
 .dialog-title {

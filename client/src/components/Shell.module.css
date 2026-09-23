@@ -1,8 +1,12 @@
+/* A fixed-height shell (not min-height): pages that need an internal sticky header/footer
+   (the WhatsApp-style inbox) only get one if this box never grows past the viewport. Content
+   taller than one screen scrolls inside .main instead of scrolling the whole window. */
 .shell {
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
   flex-direction: column;
   background: var(--bg);
+  overflow: hidden;
 }
 
 .bar {
@@ -13,7 +17,7 @@
   gap: 20px;
   padding: 0 20px;
   border-bottom: 1px solid var(--border);
-  background: var(--surface);
+  background: var(--raised); /* WhatsApp's grey panel header */
 }
 
 .brand {
@@ -121,4 +125,8 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
+  /* The one scrolling region for pages that don't manage their own (Admin, Launch). Pages
+     that do (the client inbox) fill this box exactly and never trigger it. */
+  overflow-y: auto;
+  overflow-x: hidden;
 }

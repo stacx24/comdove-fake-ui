@@ -1,7 +1,8 @@
 // Input checks shared by the admin forms and the sample server.
 // Each returns an error message, or null when the input is fine.
 
-export const MAX_GROUP_SIZE = 10
+// 100 tiles per group: one business number messages 100 customers (WS-343).
+export const MAX_GROUP_SIZE = 100
 
 const PHONE = /^\d{8,15}$/
 const GROUP_NAME = /^[a-z0-9]+(-[a-z0-9]+)*$/
@@ -30,7 +31,10 @@ export function checkGroupNumbers(numbers: string[]): string | null {
     const error = checkPhone(number)
     if (error) return error
   }
-  const duplicate = numbers.find((n, i) => numbers.indexOf(n) !== i)
-  if (duplicate) return `${duplicate} is listed twice.`
+  const seen = new Set<string>()
+  for (const number of numbers) {
+    if (seen.has(number)) return `${number} is listed twice.`
+    seen.add(number)
+  }
   return null
 }

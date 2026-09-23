@@ -39,6 +39,9 @@ const nowSeconds = () => Math.floor(Date.now() / 1000)
 // In server mode the ⚙ panel saves on the server; wait for typing to pause before each save.
 const SAVE_DEBOUNCE_MS = 400
 
+// Auto-reply settings are fetched per tile on claim; this caps the requests in flight.
+const AUTO_REPLY_LOAD_CONCURRENCY = 8
+
 // Until the server's setting has loaded, a tile shows the default (manual).
 const initialConfig = (number: string) =>
   data.autoReplyOnServer ? { ...DEFAULT_CONFIG, keywords: [] } : loadConfig(number)
@@ -172,13 +175,33 @@ export function useGroupSession(group: string): GroupSession {
   useEffect(() => {
     if (!data.autoReplyOnServer || !tileList) return
     let cancelled = false
-    for (const number of tileList.split(',')) {
-      data.getAutoReply(number).then(
-        // A change made in this tab while loading wins over the loaded value.
-        (config) => !cancelled && setOverrides((o) => (number in o ? o : { ...o, [number]: config })),
-        () => {}, // stays on the default; saving later reports any real problem
-      )
+    const numbers = tileList.split(',')
+    const loaded: Record<string, AutoReplyConfig> = {}
+    let next = 0
+
+    // A few requests at a time, not one per tile: a 100-tile group (WS-343) would
+    // otherwise fire 100 requests the moment it is claimed. Results land in one batch.
+    const worker = async (): Promise<void> => {
+      while (!cancelled && next < numbers.length) {
+        const number = numbers[next++]
+        try {
+          loaded[number] = await data.getAutoReply(number)
+        } catch {
+          // stays on the default; saving later reports any real problem
+        }
+      }
     }
+    const workers = Math.min(AUTO_REPLY_LOAD_CONCURRENCY, numbers.length)
+    void Promise.all(Array.from({ length: workers }, worker)).then(() => {
+      if (cancelled) return
+      // A change made in this tab while loading wins over the loaded value.
+      setOverrides((o) => {
+        const merged = { ...o }
+        for (const [number, config] of Object.entries(loaded)) if (!(number in o)) merged[number] = config
+        return merged
+      })
+    })
+
     return () => {
       cancelled = true
     }

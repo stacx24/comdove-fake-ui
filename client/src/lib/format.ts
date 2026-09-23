@@ -10,6 +10,36 @@ export function hhmm(unixSeconds: number): string {
 /** "919876543210" → "+919876543210". */
 export const plus = (number: string) => `+${number}`
 
+const MONTHS = [
+  'JANUARY',
+  'FEBRUARY',
+  'MARCH',
+  'APRIL',
+  'MAY',
+  'JUNE',
+  'JULY',
+  'AUGUST',
+  'SEPTEMBER',
+  'OCTOBER',
+  'NOVEMBER',
+  'DECEMBER',
+]
+
+/** The day a message belongs to, as a key that changes at midnight: "2026-9-23". */
+export function dayKey(unixSeconds: number): string {
+  const d = new Date(unixSeconds * 1000)
+  return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`
+}
+
+/** The divider WhatsApp puts between days: "TODAY", "YESTERDAY", else "22 JANUARY 2026". */
+export function dayLabel(unixSeconds: number, nowSeconds = Date.now() / 1000): string {
+  const key = dayKey(unixSeconds)
+  if (key === dayKey(nowSeconds)) return 'TODAY'
+  if (key === dayKey(nowSeconds - 86400)) return 'YESTERDAY'
+  const d = new Date(unixSeconds * 1000)
+  return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`
+}
+
 /** The registered label for a business number, e.g. "Sales", or undefined if unknown. */
 export function businessLabel(number: string, list: BusinessNumber[]): string | undefined {
   return list.find((b) => b.display_number === number)?.label

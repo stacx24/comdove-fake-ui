@@ -41,7 +41,7 @@
 }
 .online .presenceDot {
   background: var(--ok);
-  box-shadow: 0 0 0 3px rgba(77, 190, 147, 0.18);
+  box-shadow: 0 0 0 3px rgba(37, 211, 102, 0.22);
 }
 
 .number {
@@ -123,7 +123,7 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  background: var(--bg);
+  background: var(--chat-bg);
 }
 
 .empty {
@@ -152,15 +152,15 @@
   overflow-wrap: anywhere;
 }
 .customer {
-  background: var(--raised);
-  border: 1px solid var(--divider);
-}
-.comdove {
   background: var(--out-bg);
   border: 1px solid var(--out-border);
 }
+.comdove {
+  background: var(--in-bg);
+  border: 1px solid var(--in-border);
+}
 .failed {
-  border-color: rgba(217, 82, 74, 0.5);
+  border-color: rgba(217, 52, 43, 0.5);
 }
 
 .sender {

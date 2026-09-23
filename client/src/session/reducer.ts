@@ -71,6 +71,9 @@ function withTile(state: SessionState, number: string, change: (tile: UiTile) =>
   return { ...state, tiles: { ...state.tiles, [number]: change(tile) } }
 }
 
+const hasWamid = (tile: UiTile, wamid: string): boolean =>
+  tile.history.some((m) => m.wamid === wamid) || tile.queued.some((m) => m.wamid === wamid)
+
 function appendNew(history: UiMessage[], messages: ChatMessage[]): UiMessage[] {
   const known = new Set(history.map((m) => m.wamid))
   const fresh = messages.filter((m) => !known.has(m.wamid) && known.add(m.wamid))
@@ -120,6 +123,14 @@ export function reducer(state: SessionState, action: Action): SessionState {
       }))
 
     case 'message.status': {
+      // One status frame belongs to one tile. Touch only that tile: with 100 tiles,
+      // rebuilding all of them per sent/delivered/read frame re-renders the whole grid.
+      const holder =
+        action.number && state.tiles[action.number]
+          ? action.number
+          : Object.keys(state.tiles).find((n) => hasWamid(state.tiles[n], action.wamid))
+      if (!holder) return state
+
       let changed = false
       const update = <M extends ChatMessage>(m: M): M => {
         if (m.wamid !== action.wamid) return m
@@ -128,11 +139,9 @@ export function reducer(state: SessionState, action: Action): SessionState {
         changed = true
         return { ...m, status }
       }
-      const tiles: Record<string, UiTile> = {}
-      for (const [n, t] of Object.entries(state.tiles)) {
-        tiles[n] = { ...t, history: t.history.map(update), queued: t.queued.map(update) }
-      }
-      return changed ? { ...state, tiles } : state
+      const tile = state.tiles[holder]
+      const next = { ...tile, history: tile.history.map(update), queued: tile.queued.map(update) }
+      return changed ? { ...state, tiles: { ...state.tiles, [holder]: next } } : state
     }
 
     case 'local.send':

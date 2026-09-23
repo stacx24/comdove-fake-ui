@@ -38,6 +38,33 @@
   color: var(--faint);
 }
 
+.viewToggle {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: var(--radius-control);
+  border: 1px solid var(--border);
+  background: var(--raised);
+}
+
+.viewButton {
+  height: 22px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+}
+.viewButton:hover {
+  color: var(--text);
+}
+.viewButtonActive {
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 500;
+}
+
 .stats {
   margin-left: auto;
   display: flex;
@@ -80,8 +107,16 @@
 
 .scroll {
   flex: 1;
+  min-height: 0;
   overflow: auto;
   padding: 16px 20px;
+}
+
+.inboxWrap {
+  flex: 1;
+  min-height: 0;
+  padding: 16px 20px;
+  display: flex;
 }
 
 /* Tile width as in the Comdove Mock UI design. */
@@ -138,8 +173,8 @@
   margin: 12px 20px 0;
   padding: 8px 10px 8px 14px;
   border-radius: 8px;
-  border: 1px solid rgba(217, 82, 74, 0.45);
-  background: rgba(217, 82, 74, 0.1);
+  border: 1px solid rgba(217, 52, 43, 0.45);
+  background: rgba(217, 52, 43, 0.08);
   color: var(--text);
   flex-shrink: 0;
 }

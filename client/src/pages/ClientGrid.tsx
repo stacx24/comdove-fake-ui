@@ -1,6 +1,7 @@
-// Tile grid for one group, opened via /client?group=name (FR-14, FR-16).
-import { useEffect } from 'react'
+// Tile grid (or WhatsApp-style inbox) for one group, opened via /client?group=name (FR-14, FR-16).
+import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import Inbox from '../components/Inbox'
 import Tile from '../components/Tile'
 import type { ConnectionState } from '../data'
 import { onlineCount, totalQueued } from '../session/reducer'
@@ -16,6 +17,26 @@ const CONNECTION: Record<ConnectionState, { text: string; tone: 'green' | 'amber
   closed: { text: 'Disconnected', tone: 'grey' },
 }
 
+type View = 'tiles' | 'inbox'
+const VIEW_KEY = 'comdove-mock:client-view'
+
+// A big group (WS-343: up to 100 tiles) hides who wrote to whom — the inbox names the
+// business number on every bubble instead. Remembered per browser; never throws (private windows).
+function loadView(): View {
+  try {
+    return localStorage.getItem(VIEW_KEY) === 'tiles' ? 'tiles' : 'inbox'
+  } catch {
+    return 'inbox'
+  }
+}
+function saveView(view: View): void {
+  try {
+    localStorage.setItem(VIEW_KEY, view)
+  } catch {
+    // per-viewer convenience only
+  }
+}
+
 export default function ClientGrid() {
   const [params] = useSearchParams()
   const group = params.get('group') ?? ''
@@ -27,6 +48,11 @@ function GroupView({ group }: { group: string }) {
   const navigate = useNavigate()
   const { state, check, checkError, businessNumbers, autoReply, paused, actions, recheck } = useGroupSession(group)
   const back = () => navigate('/client')
+  const [view, setView] = useState<View>(loadView)
+  const setAndSaveView = (v: View) => {
+    setView(v)
+    saveView(v)
+  }
 
   // Claim refused, or the group was deleted: back to the launch page, which shows the notice (Tech Spec §7).
   useEffect(() => {
@@ -78,6 +104,25 @@ function GroupView({ group }: { group: string }) {
         <div className={styles.name}>{group}</div>
         <div className={`${styles.url} mono`}>/client?group={group}</div>
 
+        <div className={styles.viewToggle} role="group" aria-label="View">
+          <button
+            type="button"
+            className={`${styles.viewButton} ${view === 'inbox' ? styles.viewButtonActive : ''}`}
+            data-testid="view-inbox"
+            onClick={() => setAndSaveView('inbox')}
+          >
+            Inbox
+          </button>
+          <button
+            type="button"
+            className={`${styles.viewButton} ${view === 'tiles' ? styles.viewButtonActive : ''}`}
+            data-testid="view-tiles"
+            onClick={() => setAndSaveView('tiles')}
+          >
+            Tiles
+          </button>
+        </div>
+
         <div className={styles.stats}>
           <div className={styles.connection} data-testid="connection-state">
             <span className={`${styles.dot} ${styles[connection.tone]}`} />
@@ -116,22 +161,40 @@ function GroupView({ group }: { group: string }) {
         </div>
       )}
 
-      <div className={styles.scroll}>
-        <div className={styles.grid}>
-          {ready
-            ? tiles.map((tile) => (
-                <Tile
-                  key={tile.number}
-                  tile={tile}
-                  businessNumbers={businessNumbers}
-                  actions={actions}
-                  autoReply={autoReply[tile.number]}
-                  paused={!!paused[tile.number]}
-                />
-              ))
-            : Array.from({ length: 6 }, (_, i) => <div key={i} className={styles.skeleton} aria-hidden="true" />)}
+      {view === 'inbox' ? (
+        <div className={styles.inboxWrap}>
+          {ready ? (
+            <Inbox
+              tiles={tiles}
+              businessNumbers={businessNumbers}
+              actions={actions}
+              autoReply={autoReply}
+              paused={paused}
+              currentGroup={group}
+              onSwitchGroup={(id) => navigate(`/client?group=${encodeURIComponent(id)}`)}
+            />
+          ) : (
+            <div className={styles.message}>Connecting…</div>
+          )}
         </div>
-      </div>
+      ) : (
+        <div className={styles.scroll}>
+          <div className={styles.grid}>
+            {ready
+              ? tiles.map((tile) => (
+                  <Tile
+                    key={tile.number}
+                    tile={tile}
+                    businessNumbers={businessNumbers}
+                    actions={actions}
+                    autoReply={autoReply[tile.number]}
+                    paused={!!paused[tile.number]}
+                  />
+                ))
+              : Array.from({ length: 6 }, (_, i) => <div key={i} className={styles.skeleton} aria-hidden="true" />)}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
