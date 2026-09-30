@@ -17,6 +17,8 @@ export interface TileActions {
   markRead(number: string, peer: string): void
   /** Applies a tile's auto-reply settings at once and saves them (browser in mock mode, server otherwise). */
   setAutoReply(number: string, config: AutoReplyConfig): void
+  /** WS-357: the tester tapped an option on an interactive menu. */
+  selectOption(wamid: string, optionId: string): Promise<void>
   /** Hides the server notice under the sub-header. */
   dismissNotice(): void
 }
@@ -261,11 +263,27 @@ export function useGroupSession(group: string): GroupSession {
     })
   }, [])
 
+  // The server turns the tap into a real inbound message, which arrives over the socket
+  // like any other — so there is nothing optimistic to add here, only a failure to report.
+  const selectOption = useCallback(async (wamid: string, optionId: string) => {
+    try {
+      await data.selectOption(wamid, optionId)
+    } catch (err: unknown) {
+      dispatch({
+        type: 'local.notice',
+        notice: {
+          code: 'option_not_sent',
+          message: `Menu choice not sent: ${err instanceof Error ? err.message : String(err)}`,
+        },
+      })
+    }
+  }, [])
+
   const dismissNotice = useCallback(() => dispatch({ type: 'local.notice', notice: null }), [])
 
   const actions = useMemo<TileActions>(
-    () => ({ send, retry, setPresence, markRead, setAutoReply, dismissNotice }),
-    [send, retry, setPresence, markRead, setAutoReply, dismissNotice],
+    () => ({ send, retry, setPresence, markRead, setAutoReply, selectOption, dismissNotice }),
+    [send, retry, setPresence, markRead, setAutoReply, selectOption, dismissNotice],
   )
 
   // Starts a fresh group lookup (the Retry button after a failed check).

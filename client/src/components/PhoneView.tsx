@@ -435,7 +435,7 @@ function BusinessChat({
                   </span>
                 </div>
               )}
-              <Bubble m={m} own={m.from === n} sender={null} onRetry={actions.retry} />
+              <Bubble m={m} own={m.from === n} sender={null} onRetry={actions.retry} onSelect={actions.selectOption} />
             </Fragment>
           ))
         )}

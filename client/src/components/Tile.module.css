@@ -199,6 +199,86 @@
   text-decoration: underline;
 }
 
+/* ---- Interactive menus (WS-357) ---- */
+/* A menu is wider than a text bubble: ten rows have to stay readable in a 340px tile. */
+.menu {
+  min-width: 190px;
+}
+
+.menuHeader {
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.menuBody {
+  white-space: pre-wrap;
+}
+
+.menuSection {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 6px;
+}
+
+.menuSectionTitle {
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* One tappable option. Full width and left-aligned, like a WhatsApp list row. */
+.menuOption {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  width: 100%;
+  text-align: left;
+  padding: 5px 8px;
+  border: 1px solid var(--in-border);
+  border-radius: var(--radius-bubble);
+  background: var(--surface);
+  color: inherit;
+  font-size: 12px;
+  line-height: 1.3;
+  cursor: pointer;
+}
+.menuOption:hover:not(:disabled) {
+  background: var(--hover);
+  border-color: var(--accent);
+}
+/* Disabled covers both the read-only group feed and the moment a tap is in flight. */
+.menuOption:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.menuOptionTitle {
+  font-weight: 500;
+}
+
+.menuOptionDesc {
+  font-size: 10.5px;
+  color: var(--muted);
+}
+
+.menuFooter {
+  margin-top: 6px;
+  font-size: 10px;
+  color: var(--muted);
+}
+
+/* Which Cloud API shape this is — the one thing a tester checks that WhatsApp never shows. */
+.menuKind {
+  margin-top: 4px;
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
 /* ---- Composer ---- */
 .composer {
   padding: 8px;

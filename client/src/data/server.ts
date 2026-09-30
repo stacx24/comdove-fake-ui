@@ -96,6 +96,9 @@ export const serverSource: DataSource = {
   listBusinessNumbers: api.listBusinessNumbers,
   connectGroup,
   autoReplyOnServer: true,
+  selectOption: async (wamid, optionId) => {
+    await api.interactiveReply(wamid, optionId)
+  },
   getAutoReply: async (number) => fromServerAutoReply(await api.getAutoReply(number)),
   saveAutoReply: async (number, config) => {
     await api.putAutoReply(number, toServerAutoReply(config))

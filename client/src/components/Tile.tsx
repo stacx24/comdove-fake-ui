@@ -133,7 +133,14 @@ function Tile({ tile, businessNumbers, actions, autoReply, paused }: TileProps) 
           <div className={styles.empty}>No messages yet</div>
         ) : (
           tile.history.map((m) => (
-            <Bubble key={m.wamid} m={m} own={m.from === n} sender={multiPeer ? label(m.from) : null} onRetry={actions.retry} />
+            <Bubble
+              key={m.wamid}
+              m={m}
+              own={m.from === n}
+              sender={multiPeer ? label(m.from) : null}
+              onRetry={actions.retry}
+              onSelect={actions.selectOption}
+            />
           ))
         )}
       </div>

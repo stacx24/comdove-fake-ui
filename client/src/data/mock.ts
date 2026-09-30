@@ -51,6 +51,9 @@ export const mockSource: DataSource = {
     }
   },
 
+  // Mock data has no menus, so nothing can be tapped here.
+  selectOption: () => Promise.reject(new Error('Interactive menus need the real mock server.')),
+
   // No server: the browser runs auto-reply and keeps the settings in localStorage (Task 8).
   autoReplyOnServer: false,
   getAutoReply: (number) => Promise.resolve(loadConfig(number)),

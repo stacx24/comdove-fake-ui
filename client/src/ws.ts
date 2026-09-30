@@ -1,5 +1,5 @@
 // WebSocket connection to the mock server (Tech Spec §7). One socket per group.
-import type { ChatMessage, ClientEvent, ServerEvent } from './types'
+import type { ChatMessage, ClientEvent, Interactive, ServerEvent } from './types'
 
 // --- Server → UI message shape adapter -------------------------------------
 // The mock server sends chat messages as { wamid, peer, direction, body, status,
@@ -18,6 +18,8 @@ interface RawServerMessage {
   from?: string
   to?: string
   timestamp?: number
+  // WS-357: only on menu bubbles; absent on every plain-text frame.
+  interactive?: Interactive | null
 }
 
 function toChatMessage(raw: RawServerMessage, tile: string): ChatMessage {
@@ -27,7 +29,15 @@ function toChatMessage(raw: RawServerMessage, tile: string): ChatMessage {
   // created_at is unix ms; ChatMessage.timestamp is unix seconds (hhmm ×1000).
   const timestamp =
     raw.timestamp ?? (raw.created_at != null ? Math.floor(raw.created_at / 1000) : 0)
-  return { wamid: raw.wamid, from, to, body: raw.body, status: raw.status, timestamp }
+  return {
+    wamid: raw.wamid,
+    from,
+    to,
+    body: raw.body,
+    status: raw.status,
+    timestamp,
+    ...(raw.interactive ? { interactive: raw.interactive } : {}),
+  }
 }
 
 // Normalize an incoming server event so every embedded message is a ChatMessage.

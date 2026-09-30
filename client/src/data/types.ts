@@ -25,6 +25,11 @@ export interface DataSource {
    * must then never reply as well, or every message gets two replies.
    */
   autoReplyOnServer: boolean
+  /**
+   * WS-357: the tester tapped an option on an interactive menu. Resolves once the
+   * server has accepted it; the resulting inbound message arrives over the socket.
+   */
+  selectOption(wamid: string, optionId: string): Promise<void>
   getAutoReply(number: string): Promise<AutoReplyConfig>
   saveAutoReply(number: string, config: AutoReplyConfig): Promise<void>
 }

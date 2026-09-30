@@ -83,6 +83,14 @@ const serverApi = {
   deleteGroup: (id: string) => request<void>('DELETE', `/api/groups/${encodeURIComponent(id)}`),
   setPresence: (number: string, online: boolean) => request<void>('POST', '/api/presence', { number, online }),
   inject: (from: string, to: string, body: string) => request<{ wamid: string }>('POST', '/api/inject', { from, to, body }),
+  // WS-357: the tester picked an option on a menu. The server turns it into a real
+  // inbound message; it comes back over the socket like any other, so nothing to merge here.
+  interactiveReply: (wamid: string, option_id: string) =>
+    request<{ wamid: string; replied_to: string; type: string; selected: { id: string; title: string } }>(
+      'POST',
+      '/api/interactive-reply',
+      { wamid, option_id },
+    ),
   log: (limit = 100) => request<LogEntry[]>('GET', `/api/log?limit=${limit}`),
   reset: (keep_numbers = true) => request<void>('POST', '/api/reset', { keep_numbers }),
   // UI-API-GUIDE.md §3b: the ⚙ panel reads and saves a tile's auto-reply on the server.
@@ -103,6 +111,9 @@ const sampleApi: typeof serverApi = {
   setPresence: async () => {},
   inject: async () => {
     throw new ApiError('Inject needs the real mock server (VITE_DATA_SOURCE=server).')
+  },
+  interactiveReply: async () => {
+    throw new ApiError('Interactive menus need the real mock server (VITE_DATA_SOURCE=server).')
   },
   log: (limit = 100) => sample(() => sampleServer.log(limit)),
   reset: (keep_numbers = true) => sample(() => sampleServer.reset(keep_numbers)),
