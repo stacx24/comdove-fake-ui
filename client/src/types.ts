@@ -2,6 +2,35 @@
 
 export type MessageStatus = 'queued' | 'sent' | 'delivered' | 'read' | 'failed'
 
+// ---- Interactive menus (WS-357) ----
+// Mirrors the server's InteractiveDTO. `id` is what the tap sends back and what a
+// Comdove automation routes on; `title` is only what the tester reads.
+
+export interface ListRow {
+  id: string
+  title: string
+  description?: string
+}
+
+export interface ListMenu {
+  kind: 'list'
+  header?: string
+  body: string
+  footer?: string
+  button: string
+  sections: { title?: string; rows: ListRow[] }[]
+}
+
+export interface ButtonMenu {
+  kind: 'button'
+  header?: string
+  body: string
+  footer?: string
+  buttons: { id: string; title: string }[]
+}
+
+export type Interactive = ListMenu | ButtonMenu
+
 export interface ChatMessage {
   wamid: string
   from: string
@@ -9,6 +38,8 @@ export interface ChatMessage {
   body: string
   status: MessageStatus
   timestamp: number // unix seconds, same as Meta
+  /** WS-357: set only when this bubble is a list menu or reply buttons; `body` stays the summary. */
+  interactive?: Interactive | null
 }
 
 export interface BusinessNumber {
@@ -51,6 +82,8 @@ export interface TimelineEvent {
 export interface WebhookAttempt {
   n: number
   http_status?: number
+  /** Why it failed when there is no status: ECONNREFUSED, ETIMEDOUT, socket hang up. */
+  error?: string | null
   duration_ms?: number
   at: number
 }
@@ -75,6 +108,7 @@ export interface LogEntry {
   business?: { phone_number_id: string; label: string }
   group_id?: string | null
   body?: string | null
+  interactive?: Interactive | null
   status?: MessageStatus
   timeline?: TimelineEvent[]
   webhooks?: WebhookDelivery[]
