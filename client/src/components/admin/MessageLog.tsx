@@ -39,7 +39,7 @@ function webhookSummary(entry: LogEntry): { text: string; color: string } {
   if (!latest) return { text: '—', color: 'var(--dim)' }
   if (!last) return { text: latest.state, color: 'var(--dim)' }
 
-  const code = last.http_status ?? 'timeout'
+  const code = reasonOf(last)
   if (isOk(latest.state)) {
     return { text: `${code}${last.duration_ms != null ? ` · ${last.duration_ms}ms` : ''}`, color: 'var(--green)' }
   }
@@ -48,8 +48,15 @@ function webhookSummary(entry: LogEntry): { text: string; color: string } {
   return { text: latest.state, color: 'var(--dim)' }
 }
 
+// A call with no HTTP status failed below HTTP: refused, DNS, TLS, or a real timeout.
+// The server says which in `error`; printing "timeout" for all of them once sent a
+// debugging session chasing the wrong thing entirely.
+function reasonOf(a: Pick<WebhookAttempt, 'http_status' | 'error'>): string | number {
+  return a.http_status ?? a.error ?? 'no response'
+}
+
 function attemptText(a: WebhookAttempt) {
-  const code = a.http_status ?? 'timeout'
+  const code = reasonOf(a)
   const took = a.duration_ms != null ? ` · ${a.duration_ms}ms` : ''
   return `#${a.n} ${code}${took} · ${formatTime(a.at)}`
 }

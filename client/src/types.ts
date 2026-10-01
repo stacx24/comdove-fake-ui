@@ -82,6 +82,8 @@ export interface TimelineEvent {
 export interface WebhookAttempt {
   n: number
   http_status?: number
+  /** Why it failed when there is no status: ECONNREFUSED, ETIMEDOUT, socket hang up. */
+  error?: string | null
   duration_ms?: number
   at: number
 }
